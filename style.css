@@ -163,3 +163,33 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
   h1,h2,h3 { color:#111 !important; }
   a { color:#111 !important; text-decoration:none !important; }
 }
+
+
+/* Professional, uncluttered page actions and clean print output */
+.page-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.page-actions #quickAdd{min-width:150px}
+.section-head>.button-row{align-items:center;justify-content:flex-end}
+.section-head .btn{min-height:40px;padding:10px 13px}
+@media(max-width:650px){
+ .page-heading{align-items:flex-start}
+ .page-actions{width:100%;justify-content:flex-start}
+ .page-actions #quickAdd{width:100%;min-width:0}
+ .section-head{flex-wrap:wrap}
+ .section-head>.button-row{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .section-head>.button-row .btn{width:100%;white-space:normal;padding:10px 8px}
+ .section-head>.button-row #exportTransactions,
+ .section-head>.button-row #exportReport{grid-column:1/-1}
+}
+@media print{
+ body{background:#fff!important;color:#111!important}
+ .topbar,.sidebar,.mobile-nav,.page-heading .page-actions,.quick-actions,.upgrade-card,
+ .btn,.link-btn,.filters,#modal,.toast,.landing-page{display:none!important}
+ .layout,.main{display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+ .page.hidden{display:none!important}
+ .page:not(.hidden){display:block!important}
+ .card,.summary-card,.hero-balance{box-shadow:none!important;border:1px solid #ddd!important;break-inside:avoid}
+ .hero-balance{background:#fff!important;color:#111!important}
+ .hero-balance span,.hero-balance small{color:#333!important}
+ .record-row{break-inside:avoid}
+ .footer{display:flex!important}
+}
