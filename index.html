@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-transactionfix5">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-transactionfix5"></script><script src="./app.js?v=20261025-transactionfix5" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-fullrepair1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-fullrepair1"></script><script src="./app.js?v=20261025-fullrepair1" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -26,12 +26,12 @@
 <div class="two-col"><section class="card"><div class="section-head"><div><h2>Recent transactions</h2><p>Your latest money activity</p></div><button class="link-btn" data-page="transactions">See all →</button></div><div id="recentList" class="list"></div></section><section class="card"><div class="section-head"><div><h2>Monthly budget</h2><p>Keep spending on track</p></div><button class="link-btn" data-page="budgets">View →</button></div><div id="homeBudgetList" class="list"></div></section></div>
 <div class="upgrade-card"><div><span class="premium-label">LIVING BUDGET PREMIUM</span><h2>Make your money go further.</h2><p>Explore family sharing, advanced reports and more.</p></div><button class="btn light" data-page="premium">Explore Premium</button></div>
 </section>
-<section id="transactionsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>All transactions</h2><p>Search and filter your income and spending.</p></div><button id="exportTransactions" class="btn outline">Export CSV</button></div><div class="filters"><input id="transactionSearch" placeholder="Search transactions…" aria-label="Search transactions"><select id="typeFilter"><option value="all">All activity</option><option value="income">Income</option><option value="expense">Expenses</option></select><select id="categoryFilter"><option value="all">All categories</option></select></div><div id="transactionsList" class="list"></div></section></section>
+<section id="transactionsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>All transactions</h2><p>Search and filter your income and spending.</p></div><div class="button-row"><button id="shareTransactions" class="btn outline" type="button">Share</button><button id="printTransactions" class="btn outline" type="button">Print</button><button id="exportTransactions" class="btn outline">Export CSV</button></div></div><div class="filters"><input id="transactionSearch" placeholder="Search transactions…" aria-label="Search transactions"><select id="typeFilter"><option value="all">All activity</option><option value="income">Income</option><option value="expense">Expenses</option></select><select id="categoryFilter"><option value="all">All categories</option></select></div><div id="transactionsList" class="list"></div></section></section>
 <section id="budgetsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Family budget</h2><p>Set a limit for the things your household needs.</p></div><button id="addBudget" class="btn primary">＋ Add budget</button></div><div id="budgetsList" class="list"></div></section></section>
 <section id="goalsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Savings goals</h2><p>Small deposits can build a better future.</p></div><button id="addGoal" class="btn primary">＋ New goal</button></div><div id="goalsList" class="tile-grid"></div></section></section>
 <section id="billsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Bills & reminders</h2><p>Keep track of what is due and what is paid.</p></div><button id="addBill" class="btn primary">＋ Add bill</button></div><div id="billsList" class="list"></div></section></section>
 <section id="debtsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Debts & loans</h2><p>Track money you owe and money owed to you.</p></div><button id="addDebt" class="btn primary">＋ Add debt</button></div><div id="debtsList" class="list"></div></section></section>
-<section id="reportsPage" class="page hidden"><div class="summary-grid"><article class="summary-card"><span>Total income</span><strong id="reportIncome">KSh 0</strong></article><article class="summary-card"><span>Total expenses</span><strong id="reportExpense">KSh 0</strong></article><article class="summary-card"><span>Left over</span><strong id="reportBalance">KSh 0</strong></article></div><section class="card report-card"><div class="section-head"><div><h2>Spending by category</h2><p>See which areas use the most money.</p></div><button id="exportReport" class="btn outline">Download report</button></div><div id="reportBars" class="list"></div></section></section>
+<section id="reportsPage" class="page hidden"><div class="summary-grid"><article class="summary-card"><span>Total income</span><strong id="reportIncome">KSh 0</strong></article><article class="summary-card"><span>Total expenses</span><strong id="reportExpense">KSh 0</strong></article><article class="summary-card"><span>Left over</span><strong id="reportBalance">KSh 0</strong></article></div><section class="card report-card"><div class="section-head"><div><h2>Spending by category</h2><p>See which areas use the most money.</p></div><div class="button-row"><button id="shareReport" class="btn outline" type="button">Share report</button><button id="printReport" class="btn outline" type="button">Print report</button><button id="exportReport" class="btn outline">Download report</button></div></div><div id="reportBars" class="list"></div></section></section>
 <section id="familyPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Family budget sharing</h2><p>Invite trusted people to plan together. Cloud sharing requires a signed-in account.</p></div></div><div class="info-box">🔐 Family sharing will be enabled after secure Supabase setup. Never share your password or secret database keys.</div><form id="inviteForm" class="simple-form"><label>Family member email<input type="email" name="email" placeholder="name@example.com" required></label><label>Role<select name="role"><option value="viewer">Can view</option><option value="editor">Can view and edit</option></select></label><button class="btn primary" type="submit">Prepare invitation</button></form><div id="familyList" class="list"></div></section></section>
 <section id="settingsPage" class="page hidden"><section class="card"><div class="section-head"><div><h2>Settings</h2><p>Make Living Budget work for you.</p></div></div><form id="settingsForm" class="simple-form"><label>Currency<select id="currencySelect" name="currency"><option value="KSh">Kenyan Shilling (KSh)</option><option value="$">US Dollar ($)</option><option value="€">Euro (€)</option><option value="£">British Pound (£)</option><option value="₹">Indian Rupee (₹)</option><option value="R">South African Rand (R)</option><option value="₦">Nigerian Naira (₦)</option></select></label><label>Monthly savings target<input id="savingsTarget" type="number" min="0" step="1" placeholder="e.g. 10000"></label><button class="btn primary" type="submit">Save settings</button></form><hr><h2>Account & cloud backup</h2><p class="muted">Sign in to prepare for secure cloud sync. Supabase configuration is required to activate accounts.</p><form id="authForm" class="simple-form"><label>Email<input type="email" name="email" required placeholder="you@example.com"></label><label>Password<input type="password" name="password" required minlength="6" placeholder="At least 6 characters"></label><div class="button-row"><button class="btn primary" type="submit" name="authAction" value="signin">Sign in</button><button class="btn outline" type="submit" name="authAction" value="signup">Create account</button></div><button type="button" id="signOut" class="btn outline hidden">Sign out</button></form><p id="authMessage" class="muted"></p></section></section>
 <section id="premiumPage" class="page hidden"><section class="card premium-page"><span class="premium-label">UPGRADE WHEN YOU’RE READY</span><h2>More insight. More control.</h2><p>Premium is planned for advanced reports, family sharing, bill reminders, debt tools and expanded budgeting.</p><div class="tile-grid"><article class="feature-tile">📊<h3>Advanced reports</h3><p>Understand your spending patterns.</p></article><article class="feature-tile">👨‍👩‍👧<h3>Family sharing</h3><p>Plan with the people you trust.</p></article><article class="feature-tile">🔔<h3>Smart reminders</h3><p>Stay ahead of bills and goals.</p></article></div><p class="muted">Payments are not active yet. We’ll connect a subscription provider before charging customers.</p></section></section>
@@ -41,142 +41,57 @@
 <div id="modal" class="modal-backdrop hidden"><form id="recordForm" class="modal-card"><div class="modal-head"><div><p class="eyebrow">LIVING BUDGET</p><h2 id="modalTitle">Add record</h2></div><button type="button" id="closeModal" class="close-btn" aria-label="Close">×</button></div><div id="modalFields"></div><div class="button-row modal-actions"><button type="button" id="cancelModal" class="btn outline">Cancel</button><button class="btn primary" type="submit">Save</button></div></form></div><div id="toast" class="toast" role="status"></div>
 
 <script>
-/* Independent emergency controls: do not call app.js functions, so a runtime error there cannot disable navigation. */
+/* Landing-page authentication only. App navigation, cards, and CRUD are handled by app.js. */
 (function(){
-  const pages={home:"Your money at a glance",transactions:"Transactions",budgets:"Family budget",goals:"Savings goals",bills:"Bills & reminders",debts:"Debts & loans",reports:"Reports",family:"Family members",settings:"Settings",premium:"Living Budget Premium"};
-  function navTo(page){
-    if(!pages[page]) page="home";
-    document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!==page+"Page"));
-    document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));
-    const title=document.getElementById("pageTitle"); if(title) title.textContent=pages[page];
-    const subtitle=document.getElementById("pageSubtitle"); if(subtitle) subtitle.textContent="Manage your money with Living Budget.";
-    const eyebrow=document.getElementById("eyebrow"); if(eyebrow) eyebrow.textContent=page==="home"?"YOUR MONEY, WITH A PLAN":page.toUpperCase();
-    document.getElementById("sidebar")?.classList.remove("open");
-    window.scrollTo(0,0);
-  }
-  function quickForm(type){
-    const modal=document.getElementById("modal"),fields=document.getElementById("modalFields");
-    if(!modal||!fields)return;
-    document.getElementById("modalTitle").textContent="Add transaction";
-    fields.innerHTML='<label class="field">Type<select name="type"><option value="expense">Expense</option><option value="income">Income</option></select></label><label class="field">Description<input name="description" required placeholder="What was it for?"></label><label class="field">Amount<input name="amount" type="number" min="0.01" step="0.01" required placeholder="0.00"></label><label class="field">Category<select name="category"><option>Food</option><option>Housing</option><option>Transport</option><option>Bills</option><option>Salary</option><option>Other</option></select></label><label class="field">Date<input name="date" type="date" required value="'+new Date().toISOString().slice(0,10)+'"></label>';
-    fields.querySelector('[name="type"]').value=type||"expense";
-    modal.classList.remove("hidden");
-  }
-  // Landing-page controls and authentication work independently of app.js.
-  let landingMode="signup";
-  function openLandingAuth(mode){
-    landingMode=mode==="signin"?"signin":"signup";
-    const panel=document.getElementById("landingAuthPanel");
-    if(!panel)return;
-    panel.classList.remove("hidden");
-    const title=document.getElementById("landingAuthTitle");
-    const intro=document.getElementById("landingAuthIntro");
-    const submit=document.getElementById("landingAuthSubmit");
-    const switcher=document.getElementById("landingSwitchMode");
-    const password=document.querySelector('#landingAuthForm [name="password"]');
-    if(title)title.textContent=landingMode==="signup"?"Create your free account":"Welcome back";
-    if(intro)intro.textContent=landingMode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
-    if(submit)submit.textContent=landingMode==="signup"?"Create account":"Sign in";
-    if(switcher)switcher.textContent=landingMode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
-    if(password)password.autocomplete=landingMode==="signup"?"new-password":"current-password";
-    const msg=document.getElementById("landingAuthMessage");if(msg)msg.textContent="";
-    panel.scrollIntoView({behavior:"smooth",block:"center"});
-  }
-  let fallbackAuthClient=null;
-  function getAuthClient(){
+  let mode="signup", client=null;
+  const $=s=>document.querySelector(s);
+  function authClient(){
     if(window.livingBudgetSupabase)return window.livingBudgetSupabase;
-    if(fallbackAuthClient)return fallbackAuthClient;
-    const cfg=window.APP_CONFIG;
-    if(window.supabase&&cfg&&cfg.SUPABASE_URL&&cfg.SUPABASE_KEY){
-      fallbackAuthClient=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_KEY);
-    }
-    return fallbackAuthClient;
+    if(client)return client;
+    const c=window.APP_CONFIG;
+    if(window.supabase&&c?.SUPABASE_URL&&c?.SUPABASE_KEY)client=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);
+    return client;
   }
-  document.getElementById("landingAuthForm")?.addEventListener("submit",async function(event){
-    event.preventDefault();event.stopImmediatePropagation();
-    const msg=document.getElementById("landingAuthMessage");
-    const submit=document.getElementById("landingAuthSubmit");
-    const form=new FormData(event.currentTarget);
-    const email=String(form.get("email")||"").trim();
-    const password=String(form.get("password")||"");
-    const client=getAuthClient();
-    if(!client){if(msg)msg.textContent="Sign-in service could not load. Refresh the page and try again.";return;}
-    if(submit){submit.disabled=true;submit.textContent="Please wait…";}
+  function setMode(next){
+    mode=next==="signin"?"signin":"signup";
+    $("#landingAuthPanel")?.classList.remove("hidden");
+    $("#landingAuthTitle").textContent=mode==="signup"?"Create your free account":"Welcome back";
+    $("#landingAuthIntro").textContent=mode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
+    $("#landingAuthSubmit").textContent=mode==="signup"?"Create account":"Sign in";
+    $("#landingSwitchMode").textContent=mode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
+    $("#landingAuthMessage").textContent="";
+    const p=$('#landingAuthForm [name="password"]');if(p)p.autocomplete=mode==="signup"?"new-password":"current-password";
+    $("#landingAuthPanel")?.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+  document.addEventListener("click",e=>{
+    const b=e.target.closest("[data-landing-mode]");
+    if(b){e.preventDefault();e.stopImmediatePropagation();setMode(b.dataset.landingMode);return;}
+    if(e.target.closest("#landingBack")){e.preventDefault();e.stopImmediatePropagation();$("#landingAuthPanel")?.classList.add("hidden");return;}
+    if(e.target.closest("#landingSwitchMode")){e.preventDefault();e.stopImmediatePropagation();setMode(mode==="signup"?"signin":"signup");}
+  },true);
+  $("#landingAuthForm")?.addEventListener("submit",async e=>{
+    e.preventDefault();e.stopImmediatePropagation();
+    const message=$("#landingAuthMessage"),button=$("#landingAuthSubmit"),f=new FormData(e.currentTarget);
+    const email=String(f.get("email")||"").trim(),password=String(f.get("password")||"");
+    const sb=authClient();
+    if(!sb){message.textContent="Sign-in service did not load. Check your connection and refresh.";return;}
+    button.disabled=true;button.textContent="Please wait…";
     try{
-      const result=landingMode==="signup"
-        ? await client.auth.signUp({email,password})
-        : await client.auth.signInWithPassword({email,password});
-      if(result.error){if(msg)msg.textContent=result.error.message;return;}
-      if(landingMode==="signup"&&!result.data.session){
-        if(msg)msg.textContent="Account created. Check your email for a confirmation link, then return here to sign in.";
-        return;
-      }
-      if(result.data.session){
-        document.getElementById("landingPage")?.classList.add("hidden");
-        document.body.classList.remove("landing-mode");
-        document.getElementById("connectionStatus").textContent="● Signed in";
-        if(msg)msg.textContent="Signed in successfully. Loading your budget…";
-        if(window.livingBudgetSupabase){
-          const sessionResult=await window.livingBudgetSupabase.auth.getSession();
-          if(sessionResult.data?.session){
-            document.body.classList.remove("landing-mode");
-            document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!=="homePage"));
-            const title=document.getElementById("pageTitle");if(title)title.textContent="Your money at a glance";
-            window.scrollTo(0,0);
-          }
-        }
-      } else if(msg) msg.textContent="Account created. Please check your email, then sign in.";
-    }catch(error){if(msg)msg.textContent=error?.message||"Connection failed. Check your internet and try again.";}
-    finally{if(submit){submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}}
+      const r=mode==="signup"?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+      if(r.error){message.textContent=r.error.message;return;}
+      if(mode==="signup"&&!r.data.session){message.textContent="Account created. Check your email to confirm, then return to sign in.";return;}
+      const session=r.data.session||(await sb.auth.getSession()).data?.session;
+      if(!session){message.textContent="No active session. Please sign in again.";return;}
+      $("#landingPage")?.classList.add("hidden");document.body.classList.remove("landing-mode");
+      document.querySelectorAll(".page").forEach(p=>p.classList.toggle("hidden",p.id!=="homePage"));
+      const title=$("#pageTitle");if(title)title.textContent="Your money at a glance";
+      const status=$("#connectionStatus");if(status)status.textContent="● Signed in";
+      window.scrollTo(0,0);
+      if(window.livingBudgetSupabase){const u=await window.livingBudgetSupabase.auth.getUser();if(u.data?.user)window.dispatchEvent(new CustomEvent("livingbudget:signedin"));}
+    }catch(err){message.textContent=err?.message||"Unable to sign in. Check your internet and try again.";}
+    finally{button.disabled=false;button.textContent=mode==="signup"?"Create account":"Sign in";}
   },true);
-  document.addEventListener("click",function(event){
-    const landingModeButton=event.target.closest("[data-landing-mode]");
-    if(landingModeButton){event.preventDefault();event.stopImmediatePropagation();openLandingAuth(landingModeButton.dataset.landingMode);return;}
-    if(event.target.closest("#landingBack")){event.preventDefault();event.stopImmediatePropagation();document.getElementById("landingAuthPanel")?.classList.add("hidden");return;}
-    if(event.target.closest("#landingSwitchMode")){event.preventDefault();event.stopImmediatePropagation();openLandingAuth(landingMode==="signup"?"signin":"signup");return;}
-    const nav=event.target.closest("[data-page]");
-    if(nav){event.preventDefault();event.stopImmediatePropagation();navTo(nav.dataset.page);return;}
-    const action=event.target.closest("[data-action]");
-    if(action){event.preventDefault();event.stopImmediatePropagation();quickForm(action.dataset.action);return;}
-    if(event.target.closest("#quickAdd")){event.preventDefault();event.stopImmediatePropagation();quickForm("expense");return;}
-    if(event.target.closest("#menuToggle")){document.getElementById("sidebar")?.classList.toggle("open");}
-    if(event.target.closest("#closeModal,#cancelModal")||event.target.id==="modal"){document.getElementById("modal")?.classList.add("hidden");document.body.style.overflow="";}
-  },true);
-
-  // Reliable transaction save: render immediately, never reload the landing page.
-  document.getElementById("recordForm")?.addEventListener("submit",function(event){
-    const form=event.currentTarget;
-    if(!form.querySelector('[name="description"]')||!form.querySelector('[name="amount"]'))return;
-    event.preventDefault();event.stopImmediatePropagation();
-    const fields=new FormData(form);
-    const tx={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()),type:String(fields.get("type")||"expense"),description:String(fields.get("description")||"").trim(),amount:Number(fields.get("amount")),category:String(fields.get("category")||"Other"),date:String(fields.get("date")||new Date().toISOString().slice(0,10))};
-    const toast=document.getElementById("toast");
-    if(!tx.description||!Number.isFinite(tx.amount)||tx.amount<=0){if(toast){toast.textContent="Enter a description and an amount greater than zero.";toast.classList.add("show");}return;}
-    try{
-      const key="living_budget_v1",old=JSON.parse(localStorage.getItem(key)||"{}");
-      old.transactions=Array.isArray(old.transactions)?old.transactions:[];
-      old.transactions.push(tx);localStorage.setItem(key,JSON.stringify(old));
-      const rows=old.transactions.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-      const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const money=n=>(old.currency||"KSh")+" "+Number(n||0).toLocaleString();
-      const dateText=d=>d?new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"No date";
-      const row=x=>'<div class="record-row"><div class="record-main"><span class="record-icon">'+(x.type==="income"?"🟢":"🧾")+'</span><div class="record-text"><strong>'+esc(x.description)+'</strong><small>'+esc(x.category)+' · '+dateText(x.date)+'</small></div></div><div class="record-value '+(x.type==="income"?"positive":"negative")+'">'+(x.type==="income"?"+":"−")+money(x.amount)+'</div></div>';
-      const list=document.getElementById("transactionsList");if(list)list.innerHTML=rows.map(row).join("");
-      const recent=document.getElementById("recentList");if(recent)recent.innerHTML=rows.slice(0,5).map(row).join("");
-      const month=new Date().toISOString().slice(0,7),monthly=rows.filter(x=>(x.date||"").startsWith(month));
-      const income=monthly.filter(x=>x.type==="income").reduce((s,x)=>s+Number(x.amount),0),expense=monthly.filter(x=>x.type==="expense").reduce((s,x)=>s+Number(x.amount),0);
-      const balance=document.getElementById("balanceValue"),inc=document.getElementById("incomeValue"),exp=document.getElementById("expenseValue");
-      if(balance)balance.textContent=money(income-exp);if(inc)inc.textContent=money(income);if(exp)exp.textContent=money(expense);
-      document.getElementById("modal")?.classList.add("hidden");
-      document.getElementById("landingPage")?.classList.add("hidden");document.body.classList.remove("landing-mode");
-      document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!=="transactionsPage"));
-      document.querySelectorAll("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page==="transactions"));
-      const title=document.getElementById("pageTitle");if(title)title.textContent="Transactions";
-      const subtitle=document.getElementById("pageSubtitle");if(subtitle)subtitle.textContent="Track income and spending in one place.";
-      if(toast){toast.textContent="Transaction saved on this phone and displayed below.";toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),3000);}
-    }catch(error){console.error("Transaction save failed:",error);if(toast){toast.textContent="Could not save transaction. Please try again.";toast.classList.add("show");}}
-  },true);
-  window.addEventListener("error",function(e){console.error("Living Budget JavaScript error:",e.message,e.filename,e.lineno);});
+  window.addEventListener("error",e=>console.error("Living Budget error:",e.message,e.filename,e.lineno));
 })();
 </script>
 
