@@ -82,3 +82,46 @@ input:focus,select:focus{outline:3px solid #d9f0e2;border-color:#55a879!importan
  .upgrade-card{gap:16px;align-items:flex-start;flex-direction:column}
  .upgrade-card .btn{width:100%}
 }
+
+
+/* NAVY BLUE PROFESSIONAL THEME — v2 */
+:root{--green:#18365b;--green2:#102541;--mint:#e9eff8;--ink:#17263b;--muted:#718096;--line:#dce4ef;--bg:#f3f6fb;--white:#fff;--orange:#b96e42;--shadow:0 8px 28px rgba(18,37,65,.07)}
+body{background:radial-gradient(ellipse at 90% 0%,#e5edf9 0,transparent 36%),var(--bg);color:var(--ink)}
+.topbar{background:rgba(255,255,255,.97);border-bottom-color:#dfe6f0;box-shadow:0 3px 18px rgba(16,37,65,.05)}
+.brand-icon{background:linear-gradient(145deg,#294f7c,#102541);box-shadow:0 7px 18px rgba(16,37,65,.2)}
+.sidebar{background:linear-gradient(180deg,#102541 0%,#0b1b30 100%);border-right:0;box-shadow:8px 0 28px rgba(13,31,55,.06)}
+.nav-title{color:#91a6c2}
+.nav-item{color:#d4deed;border-radius:12px;transition:background .18s,transform .18s}
+.nav-item:hover{background:rgba(255,255,255,.09);color:#fff;transform:translateX(2px)}
+.nav-item.active{background:linear-gradient(100deg,rgba(93,145,210,.28),rgba(93,145,210,.12));color:#fff;box-shadow:inset 3px 0 #7eb4f2}
+.sidebar-tip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);color:#f2f6fc}
+.sidebar-tip p{color:#c0cde0}
+.sidebar-footer{color:#d0dced}
+.sidebar-footer span{background:#dceaff;color:#18365b}
+.eyebrow,.premium-label{color:#315d92}
+.btn.primary{background:linear-gradient(135deg,#294f7c,#18365b);box-shadow:0 7px 18px rgba(24,54,91,.2)}
+.btn.primary:hover{background:#102541}
+.btn.outline{color:#18365b;border-color:#d3deed}
+.hero-balance{background:linear-gradient(118deg,#102541 0%,#18365b 57%,#315d92 100%);box-shadow:0 18px 36px rgba(16,37,65,.19)}
+.hero-balance span{color:#d7e5f8}.hero-balance small{color:#c2d5ee}
+.summary-card{border-color:#e0e7f1;background:rgba(255,255,255,.96);box-shadow:0 10px 28px rgba(18,37,65,.055)}
+.progress{background:#e7edf6}.progress i,.budget-progress span{background:linear-gradient(90deg,#5b91d2,#244d7b)}
+.quick-actions button{border-color:#dce5f0;color:#1a3b63;box-shadow:0 6px 16px rgba(18,37,65,.04)}
+.quick-actions button:hover{background:#edf3fb;border-color:#b7cbe5}
+.card{border-color:#e0e7f1;box-shadow:0 10px 28px rgba(18,37,65,.055)}
+.record-icon{background:#edf3fb;border-color:#e0e9f5}
+.positive{color:#24724e}.negative{color:#b45353}
+.tile{border-color:#e0e7f1;background:linear-gradient(160deg,#fff,#f8faff)}
+.upgrade-card{background:linear-gradient(115deg,#102541,#244b78);border:1px solid #244b78;color:#fff}
+.upgrade-card .premium-label{color:#c9ddf8}.upgrade-card p{color:#d2e0f2}
+input:focus,select:focus{outline:3px solid #dbe8f8;border-color:#5b91d2!important}
+.info-box{background:#edf3fb;color:#18365b}
+.feature-tile{background:#f7f9fd;border-color:#e0e7f1}
+.link-btn{color:#244f82}
+.empty{background:#f9fbff;border-color:#d5e0ef}
+.mobile-nav{border-top-color:#dce5f0;box-shadow:0 -5px 22px rgba(18,37,65,.06)}
+.mobile-nav button.active{color:#244f82}
+.toast{background:#102541}
+.modal-backdrop{background:rgba(8,22,41,.68)}
+.sidebar{z-index:25}
+@media(max-width:650px){.sidebar{background:linear-gradient(180deg,#102541,#0b1b30)}.mobile-nav{background:rgba(255,255,255,.98)}}
