@@ -50,8 +50,14 @@ function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABAS
 function authUI(){$("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";$("#signOut").classList.toggle("hidden",!user);$("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready"}
 async function cloudLoad(){if(!supabase||!user)return;try{let {data:rows,error}=await supabase.from("lb_transactions").select("*").order("transaction_date",{ascending:false});if(error)throw error;data.transactions=(rows||[]).map(r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}));save();render();toast("Your cloud transactions are loaded.")}catch(e){console.warn(e);toast("Cloud tables are not ready yet. Preview data is still available.")}}
 async function cloudSaveTransaction(tx){if(!supabase||!user)return;let {error}=await supabase.from("lb_transactions").insert({user_id:user.id,description:tx.description,category:tx.category,transaction_date:tx.date,amount:tx.amount,type:tx.type});if(error){console.error(error);toast("Saved on this phone; cloud save needs setup.")}}
-$$("[data-page]").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
-$("#quickAdd").addEventListener("click",()=>openModal("transaction"));$$("[data-action]").forEach(b=>b.addEventListener("click",()=>openModal("transaction",b.dataset.action)));
+/* Navigation and quick actions use delegation so every desktop/mobile button responds. */
+document.addEventListener("click",e=>{
+ const nav=e.target.closest("[data-page]");
+ if(nav){e.preventDefault();showPage(nav.dataset.page);return;}
+ const action=e.target.closest("[data-action]");
+ if(action){openModal("transaction",action.dataset.action);return;}
+ if(e.target.closest("#quickAdd"))openModal("transaction");
+});
 $("#menuToggle").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));$("#closeModal").addEventListener("click",closeModal);$("#cancelModal").addEventListener("click",closeModal);$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
 $("#addBudget").addEventListener("click",()=>openModal("budget"));$("#addGoal").addEventListener("click",()=>openModal("goal"));$("#addBill").addEventListener("click",()=>openModal("bill"));$("#addDebt").addEventListener("click",()=>openModal("debt"));
 document.addEventListener("click",e=>{let c=e.target.closest("[data-contribute]");if(c)openModal("contribute",c.dataset.contribute);let paid=e.target.closest("[data-paid]");if(paid){let b=data.bills.find(x=>x.id===paid.dataset.paid);if(b)b.paid=!b.paid;save();render()}let del=e.target.closest("[data-delete]");if(del&&confirm("Delete this record?")){let key=del.dataset.delete;data[key]=data[key].filter(x=>x.id!==del.dataset.id);save();render();toast("Record deleted.")}});
