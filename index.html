@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-crud1">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-crud1"></script><script src="./app.js?v=20261025-crud1" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-authfix1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-authfix1"></script><script src="./app.js?v=20261025-authfix1" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -62,7 +62,69 @@
     fields.querySelector('[name="fallbackType"]').value=type||"expense";
     modal.classList.remove("hidden");
   }
+  // Landing-page controls and authentication work independently of app.js.
+  let landingMode="signup";
+  function openLandingAuth(mode){
+    landingMode=mode==="signin"?"signin":"signup";
+    const panel=document.getElementById("landingAuthPanel");
+    if(!panel)return;
+    panel.classList.remove("hidden");
+    const title=document.getElementById("landingAuthTitle");
+    const intro=document.getElementById("landingAuthIntro");
+    const submit=document.getElementById("landingAuthSubmit");
+    const switcher=document.getElementById("landingSwitchMode");
+    const password=document.querySelector('#landingAuthForm [name="password"]');
+    if(title)title.textContent=landingMode==="signup"?"Create your free account":"Welcome back";
+    if(intro)intro.textContent=landingMode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
+    if(submit)submit.textContent=landingMode==="signup"?"Create account":"Sign in";
+    if(switcher)switcher.textContent=landingMode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
+    if(password)password.autocomplete=landingMode==="signup"?"new-password":"current-password";
+    const msg=document.getElementById("landingAuthMessage");if(msg)msg.textContent="";
+    panel.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+  let fallbackAuthClient=null;
+  function getAuthClient(){
+    if(fallbackAuthClient)return fallbackAuthClient;
+    const cfg=window.APP_CONFIG;
+    if(window.supabase&&cfg&&cfg.SUPABASE_URL&&cfg.SUPABASE_KEY){
+      fallbackAuthClient=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_KEY);
+    }
+    return fallbackAuthClient;
+  }
+  document.getElementById("landingAuthForm")?.addEventListener("submit",async function(event){
+    event.preventDefault();event.stopImmediatePropagation();
+    const msg=document.getElementById("landingAuthMessage");
+    const submit=document.getElementById("landingAuthSubmit");
+    const form=new FormData(event.currentTarget);
+    const email=String(form.get("email")||"").trim();
+    const password=String(form.get("password")||"");
+    const client=getAuthClient();
+    if(!client){if(msg)msg.textContent="Sign-in service could not load. Refresh the page and try again.";return;}
+    if(submit){submit.disabled=true;submit.textContent="Please wait…";}
+    try{
+      const result=landingMode==="signup"
+        ? await client.auth.signUp({email,password})
+        : await client.auth.signInWithPassword({email,password});
+      if(result.error){if(msg)msg.textContent=result.error.message;return;}
+      if(landingMode==="signup"&&!result.data.session){
+        if(msg)msg.textContent="Account created. Check your email for a confirmation link, then return here to sign in.";
+        return;
+      }
+      if(result.data.session){
+        document.getElementById("landingPage")?.classList.add("hidden");
+        document.body.classList.remove("landing-mode");
+        document.getElementById("connectionStatus").textContent="● Signed in";
+        if(msg)msg.textContent="Signed in successfully. Loading your budget…";
+        window.location.reload();
+      } else if(msg) msg.textContent="Account created. Please check your email, then sign in.";
+    }catch(error){if(msg)msg.textContent=error?.message||"Connection failed. Check your internet and try again.";}
+    finally{if(submit){submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}}
+  },true);
   document.addEventListener("click",function(event){
+    const landingModeButton=event.target.closest("[data-landing-mode]");
+    if(landingModeButton){event.preventDefault();event.stopImmediatePropagation();openLandingAuth(landingModeButton.dataset.landingMode);return;}
+    if(event.target.closest("#landingBack")){event.preventDefault();event.stopImmediatePropagation();document.getElementById("landingAuthPanel")?.classList.add("hidden");return;}
+    if(event.target.closest("#landingSwitchMode")){event.preventDefault();event.stopImmediatePropagation();openLandingAuth(landingMode==="signup"?"signin":"signup");return;}
     const nav=event.target.closest("[data-page]");
     if(nav){event.preventDefault();event.stopImmediatePropagation();navTo(nav.dataset.page);return;}
     const action=event.target.closest("[data-action]");
