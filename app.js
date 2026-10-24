@@ -216,4 +216,20 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
  finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
 });
 
+// The landing page dispatches this after successful sign-in. Re-check the session and load cloud records.
+window.addEventListener("livingbudget:signedin",async()=>{
+ try{
+  if(!supabase)initSupabase();
+  if(!supabase)return;
+  const {data:sessionData,error}=await supabase.auth.getSession();
+  if(error)throw error;
+  user=sessionData.session?.user||null;
+  authUI();
+  if(user)await cloudLoad();
+ }catch(err){
+  console.error("Living Budget sign-in sync failed:",err);
+  const message=$("#landingAuthMessage")||$("#authMessage");
+  if(message)message.textContent="Signed in, but data could not load. Please refresh and try again.";
+ }
+});
 initSupabase();render();
