@@ -148,3 +148,18 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 .landing-footer{max-width:1320px;margin:auto;border-top:1px solid #e3e9f1;padding:20px 0 26px;display:flex;justify-content:space-between;gap:10px;color:#687a90;font-size:11px}.landing-footer span{color:#8a96a7}
 .landing-auth-panel{max-width:470px;margin:5px auto 45px;background:#fff;border:1px solid #e3eaf3;border-radius:22px;padding:26px;box-shadow:0 20px 55px #142e4a12}.landing-auth-panel.hidden{display:none!important}.landing-back{border:0;background:transparent;color:#42658c;font-weight:700;cursor:pointer}.landing-auth-panel h2{margin:18px 0 5px;font-size:27px;color:#102541}.landing-auth-panel>p{color:#75849a;font-size:13px}.landing-auth-panel .simple-form{margin-top:20px}.landing-auth-panel .btn{width:100%;justify-content:center}.landing-auth-message{min-height:20px}.landing-switch{border:0;background:transparent;color:#2d5f99;font-weight:750;cursor:pointer;padding:8px 0}
 @media(max-width:800px){.landing-page{padding:0 5%}.landing-nav{height:72px}.landing-hero{grid-template-columns:1fr;gap:15px;margin-top:8px}.landing-copy{padding:22px 0 0}.landing-copy h1{font-size:clamp(38px,10vw,52px);letter-spacing:-1.7px}.landing-copy>p{font-size:14px}.landing-visual{min-height:310px}.landing-image{inset:8px 3px;border-radius:23px}.landing-float-top{left:0;top:22px}.landing-float-bottom{right:0;bottom:20px}.landing-features{grid-template-columns:1fr;margin-top:20px}.landing-features article{padding:14px}.landing-footer{flex-direction:column}.landing-trust{gap:10px;font-size:10px}}
+
+
+/* Print only the active Living Budget page; keep records readable on paper. */
+@media print {
+  body, body.landing-mode { background:#fff !important; color:#111 !important; }
+  #landingPage, .topbar, .sidebar, .mobile-nav, .footer, .page-heading button,
+  .button-row, button, .filters, #toast, #modal, .upgrade-card { display:none !important; }
+  .layout, .main, .page, .card, .summary-card, .hero-balance { display:block !important; visibility:visible !important; height:auto !important; overflow:visible !important; box-shadow:none !important; border:1px solid #ddd !important; }
+  .page.hidden { display:none !important; }
+  .main { padding:0 !important; margin:0 !important; }
+  .record-row, .tile, .summary-card { break-inside:avoid; }
+  body { font-size:12pt !important; }
+  h1,h2,h3 { color:#111 !important; }
+  a { color:#111 !important; text-decoration:none !important; }
+}
