@@ -66,10 +66,46 @@ const cloudMap={
  bills:{table:"lb_bills",sort:"due_date",from:r=>({id:r.id,name:r.name,amount:Number(r.amount),due:r.due_date,paid:!!r.is_paid}),to:x=>({id:x.id,user_id:user.id,name:x.name,amount:x.amount,due_date:x.due,is_paid:!!x.paid})},
  debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:x=>({id:x.id,user_id:user.id,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
 };
-async function cloudLoad(){if(!supabase||!user)return;try{
- for(const [key,m] of Object.entries(cloudMap)){const {data:rows,error}=await supabase.from(m.table).select("*").order(m.sort,{ascending:false});if(error)throw error;data[key]=(rows||[]).map(m.from);}
- save();render();toast("Your cloud records are loaded.");
- }catch(e){console.warn("Cloud load failed:",e);toast("Cloud data could not fully load. Check Supabase table access.");}}
+async function cloudLoad(){
+ if(!supabase||!user)return;
+ if(window.__livingBudgetCloudLoading)return window.__livingBudgetCloudLoading;
+ window.__livingBudgetCloudLoading=(async()=>{
+  const localSnapshot={};
+  for(const key of Object.keys(cloudMap))localSnapshot[key]=Array.isArray(data[key])?data[key].map(x=>({...x})):[];
+  const pendingUploads=[];
+  let anyLoaded=false,hadError=false;
+  for(const [key,m] of Object.entries(cloudMap)){
+   try{
+    const {data:rows,error}=await supabase.from(m.table).select("*").order(m.sort,{ascending:false});
+    if(error)throw error;
+    const remote=(rows||[]).map(m.from);
+    const remoteIds=new Set(remote.map(x=>String(x.id)));
+    const local=localSnapshot[key];
+    for(const item of local){
+     if(remoteIds.has(String(item.id)))continue;
+     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(item.id))){
+      item.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(16).slice(2);
+     }
+     pendingUploads.push({key,item});
+    }
+    const merged=new Map();
+    for(const item of local)merged.set(String(item.id),item);
+    for(const item of remote)merged.set(String(item.id),item);
+    data[key]=[...merged.values()];
+    anyLoaded=true;
+   }catch(err){
+    hadError=true;
+    console.error("Cloud load failed for "+m.table+":",err);
+    // Keep local records for this table; a failure in one table must not hide other data.
+   }
+  }
+  save();render();
+  for(const pending of pendingUploads)await cloudUpsert(pending.key,pending.item);
+  if(hadError)toast(anyLoaded?"Some cloud records could not load. Other records are displayed.":"Cloud data could not load; showing records saved on this phone.");
+  else toast("Your records are loaded and saved.");
+ })().finally(()=>{window.__livingBudgetCloudLoading=null;});
+ return window.__livingBudgetCloudLoading;
+}
 async function cloudUpsert(kind,item){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
 async function cloudDelete(kind,id){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
