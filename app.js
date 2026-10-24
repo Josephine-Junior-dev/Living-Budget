@@ -59,8 +59,19 @@ function authUI(){
  document.body.classList.toggle("landing-mode",!user);
  $("#landingPage")?.classList.toggle("hidden",!!user);
 }
-async function cloudLoad(){if(!supabase||!user)return;try{let {data:rows,error}=await supabase.from("lb_transactions").select("*").order("transaction_date",{ascending:false});if(error)throw error;data.transactions=(rows||[]).map(r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}));save();render();toast("Your cloud transactions are loaded.")}catch(e){console.warn(e);toast("Cloud tables are not ready yet. Preview data is still available.")}}
-async function cloudSaveTransaction(tx){if(!supabase||!user)return;let {error}=await supabase.from("lb_transactions").insert({user_id:user.id,description:tx.description,category:tx.category,transaction_date:tx.date,amount:tx.amount,type:tx.type});if(error){console.error(error);toast("Saved on this phone; cloud save needs setup.")}}
+const cloudMap={
+ transactions:{table:"lb_transactions",sort:"transaction_date",from:r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}),to:x=>({id:x.id,user_id:user.id,description:x.description,category:x.category,transaction_date:x.date,amount:x.amount,type:x.type})},
+ budgets:{table:"lb_budgets",sort:"created_at",from:r=>({id:r.id,name:r.name,category:r.category,limit:Number(r.monthly_limit)}),to:x=>({id:x.id,user_id:user.id,name:x.name,category:x.category,monthly_limit:x.limit})},
+ goals:{table:"lb_savings_goals",sort:"created_at",from:r=>({id:r.id,name:r.name,target:Number(r.target_amount),saved:Number(r.saved_amount),icon:"🎯"}),to:x=>({id:x.id,user_id:user.id,name:x.name,target_amount:x.target,saved_amount:x.saved})},
+ bills:{table:"lb_bills",sort:"due_date",from:r=>({id:r.id,name:r.name,amount:Number(r.amount),due:r.due_date,paid:!!r.is_paid}),to:x=>({id:x.id,user_id:user.id,name:x.name,amount:x.amount,due_date:x.due,is_paid:!!x.paid})},
+ debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:x=>({id:x.id,user_id:user.id,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
+};
+async function cloudLoad(){if(!supabase||!user)return;try{
+ for(const [key,m] of Object.entries(cloudMap)){const {data:rows,error}=await supabase.from(m.table).select("*").order(m.sort,{ascending:false});if(error)throw error;data[key]=(rows||[]).map(m.from);}
+ save();render();toast("Your cloud records are loaded.");
+ }catch(e){console.warn("Cloud load failed:",e);toast("Cloud data could not fully load. Check Supabase table access.");}}
+async function cloudUpsert(kind,item){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
+async function cloudDelete(kind,id){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
 document.addEventListener("click",e=>{
  const nav=e.target.closest("[data-page]");
@@ -77,17 +88,17 @@ document.addEventListener("click",async e=>{
  let edit=e.target.closest("[data-edit]");
  if(edit){let key=edit.dataset.edit,item=(data[key]||[]).find(x=>String(x.id)===String(edit.dataset.id));if(item){let kind={transactions:"transaction",budgets:"budget",goals:"goal",bills:"bill",debts:"debt"}[key];openModal(kind,item);}return;}
  let paid=e.target.closest("[data-paid]");
- if(paid){let b=data.bills.find(x=>String(x.id)===String(paid.dataset.paid));if(b){b.paid=!b.paid;save();render();}return;}
+ if(paid){let b=data.bills.find(x=>String(x.id)===String(paid.dataset.paid));if(b){b.paid=!b.paid;save();render();await cloudUpsert("bills",b);}return;}
  let del=e.target.closest("[data-delete]");
- if(del&&confirm("Delete this record?")){let key=del.dataset.delete;data[key]=(data[key]||[]).filter(x=>String(x.id)!==String(del.dataset.id));save();render();toast("Record deleted.");}
+ if(del&&confirm("Delete this record?")){let key=del.dataset.delete;const item=(data[key]||[]).find(x=>String(x.id)===String(del.dataset.id));data[key]=(data[key]||[]).filter(x=>String(x.id)!==String(del.dataset.id));save();render();if(item)await cloudDelete(key,item.id);toast("Record deleted.");}
 });
 $("#recordForm").addEventListener("submit",async e=>{e.preventDefault();let f=Object.fromEntries(new FormData(e.currentTarget));let id=editId||((window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString());
-if(modalKind==="transaction"){let x={id,description:f.description.trim(),amount:Number(f.amount),category:f.category,date:f.date,type:f.type};if(editId)data.transactions=data.transactions.map(y=>String(y.id)===String(editId)?x:y);else data.transactions.push(x);save();render();toast(editId?"Transaction updated.":"Transaction saved.")}
-if(modalKind==="budget"){let x={id,name:f.name.trim(),category:f.category,limit:Number(f.limit)};if(editId)data.budgets=data.budgets.map(y=>String(y.id)===String(editId)?x:y);else data.budgets.push(x);save();render();toast(editId?"Budget updated.":"Budget created.")}
-if(modalKind==="goal"){let x={id,name:f.name.trim(),target:Number(f.target),saved:Number(f.saved||0),icon:"🎯"};if(editId)data.goals=data.goals.map(y=>String(y.id)===String(editId)?x:y);else data.goals.push(x);save();render();toast(editId?"Savings goal updated.":"Savings goal created.")}
+if(modalKind==="transaction"){let x={id,description:f.description.trim(),amount:Number(f.amount),category:f.category,date:f.date,type:f.type};if(editId)data.transactions=data.transactions.map(y=>String(y.id)===String(editId)?x:y);else data.transactions.push(x);save();render();await cloudUpsert("transactions",x);toast(editId?"Transaction updated.":"Transaction saved.")}
+if(modalKind==="budget"){let x={id,name:f.name.trim(),category:f.category,limit:Number(f.limit)};if(editId)data.budgets=data.budgets.map(y=>String(y.id)===String(editId)?x:y);else data.budgets.push(x);save();render();await cloudUpsert("budgets",x);toast(editId?"Budget updated.":"Budget created.")}
+if(modalKind==="goal"){let x={id,name:f.name.trim(),target:Number(f.target),saved:Number(f.saved||0),icon:"🎯"};if(editId)data.goals=data.goals.map(y=>String(y.id)===String(editId)?x:y);else data.goals.push(x);save();render();await cloudUpsert("goals",x);toast(editId?"Savings goal updated.":"Savings goal created.")}
 if(modalKind==="contribute"){let g=data.goals.find(x=>String(x.id)===String(editId));if(g){g.saved=Number(g.saved)+Number(f.amount);save();render();toast("Savings updated.")}}
-if(modalKind==="bill"){let old=data.bills.find(y=>String(y.id)===String(editId));let x={id,name:f.name.trim(),amount:Number(f.amount),due:f.due,paid:old?.paid||false};if(editId)data.bills=data.bills.map(y=>String(y.id)===String(editId)?x:y);else data.bills.push(x);save();render();toast(editId?"Bill updated.":"Bill added.")}
-if(modalKind==="debt"){let x={id,name:f.name.trim(),direction:f.direction,amount:Number(f.amount),due:f.due};if(editId)data.debts=data.debts.map(y=>String(y.id)===String(editId)?x:y);else data.debts.push(x);save();render();toast(editId?"Debt updated.":"Debt record added.")}
+if(modalKind==="bill"){let old=data.bills.find(y=>String(y.id)===String(editId));let x={id,name:f.name.trim(),amount:Number(f.amount),due:f.due,paid:old?.paid||false};if(editId)data.bills=data.bills.map(y=>String(y.id)===String(editId)?x:y);else data.bills.push(x);save();render();await cloudUpsert("bills",x);toast(editId?"Bill updated.":"Bill added.")}
+if(modalKind==="debt"){let x={id,name:f.name.trim(),direction:f.direction,amount:Number(f.amount),due:f.due};if(editId)data.debts=data.debts.map(y=>String(y.id)===String(editId)?x:y);else data.debts.push(x);save();render();await cloudUpsert("debts",x);toast(editId?"Debt updated.":"Debt record added.")}
 closeModal();e.currentTarget.reset();editId=null;
 });
 $("#transactionSearch").addEventListener("input",renderTransactions);$("#typeFilter").addEventListener("change",renderTransactions);$("#categoryFilter").addEventListener("change",renderTransactions);
