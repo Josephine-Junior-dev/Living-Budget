@@ -1,88 +1,66 @@
-const initialTransactions = [
-  {id:1,description:"Monthly salary",category:"Salary",date:todayISO(),amount:75000,type:"income",icon:"↙"},
-  {id:2,description:"Groceries",category:"Food",date:daysAgo(1),amount:6800,type:"expense",icon:"⌂"},
-  {id:3,description:"Transport",category:"Transport",date:daysAgo(2),amount:3200,type:"expense",icon:"↗"},
-  {id:4,description:"Electricity bill",category:"Bills",date:daysAgo(3),amount:2450,type:"expense",icon:"ϟ"},
-  {id:5,description:"Personal care",category:"Personal",date:daysAgo(4),amount:1800,type:"expense",icon:"♡"},
-  {id:6,description:"Home supplies",category:"Housing",date:daysAgo(5),amount:4500,type:"expense",icon:"⌂"},
-  {id:7,description:"Medical",category:"Health",date:daysAgo(6),amount:2000,type:"expense",icon:"＋"}
-];
-const budgets = [
-  {name:"Food & groceries",category:"Food",icon:"⌂",spent:6800,limit:10000,color:"#2f8c63"},
-  {name:"Transport",category:"Transport",icon:"↗",spent:3200,limit:6000,color:"#78bc91"},
-  {name:"Bills & utilities",category:"Bills",icon:"ϟ",spent:2450,limit:7000,color:"#e0b85d"},
-  {name:"Personal & health",category:"Personal",icon:"♡",spent:6300,limit:9000,color:"#dce7df"}
-];
-let transactions = loadTransactions();
-let currency = localStorage.getItem("lb_currency") || "KSh";
-const fmt = n => currency + " " + Number(n).toLocaleString("en-KE",{maximumFractionDigits:2});
-function todayISO(){return new Date().toISOString().slice(0,10)}
-function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)}
-function loadTransactions(){try{const saved=localStorage.getItem("lb_preview_transactions");return saved?JSON.parse(saved):[...initialTransactions]}catch{return [...initialTransactions]}}
-function saveTransactions(){localStorage.setItem("lb_preview_transactions",JSON.stringify(transactions))}
-function formatDate(value){if(!value)return "—";return new Date(value+"T12:00:00").toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}
-function totals(){return transactions.reduce((a,t)=>{a[t.type]+=Number(t.amount);return a},{income:0,expense:0})}
-function render(){
- const t=totals(), balance=t.income-t.expense;
- document.getElementById("balanceValue").textContent=fmt(balance);
- document.getElementById("incomeValue").textContent=fmt(t.income);
- document.getElementById("expenseValue").textContent=fmt(t.expense);
- document.getElementById("chartTotal").textContent=fmt(t.expense);
- const pct=t.income?Math.max(0,Math.min(100,Math.round(balance/t.income*100))):0;
- document.getElementById("savingsValue").textContent=pct+"%";
- document.getElementById("savingsProgress").style.width=pct+"%";
- const expenseByCategory={};transactions.filter(x=>x.type==="expense").forEach(x=>expenseByCategory[x.category]=(expenseByCategory[x.category]||0)+Number(x.amount));
- const colors=["#2f8c63","#78bc91","#e0b85d","#dce7df","#8aa7b2","#c6a4cb","#e49d78"];
- const entries=Object.entries(expenseByCategory).sort((a,b)=>b[1]-a[1]);
- const total=t.expense||1;let stop=0;const stops=entries.map((e,i)=>{const start=stop;stop+=e[1]/total*100;return colors[i%colors.length]+" "+start+"% "+stop+"%"}).join(",");
- document.getElementById("donutChart").style.background=entries.length?"conic-gradient("+stops+")":"conic-gradient(#e7eee8 0 100%)";
- document.getElementById("spendingLegend").innerHTML=entries.slice(0,5).map(([name,value],i)=>'<div class="legend-row"><span class="legend-dot" style="background:'+colors[i%colors.length]+'"></span><span>'+escapeHTML(name)+'</span><strong>'+Math.round(value/total*100)+'%</strong></div>').join("")||'<span class="muted">No spending yet</span>';
- renderBudgets();renderTransactions();
+/* Living Budget — mobile-first family budgeting app.
+   Local preview is enabled until config.js contains Supabase URL and publishable/anon key.
+   Never place a Supabase service_role/secret key in browser code. */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const STORAGE="living_budget_v1";
+const today=()=>new Date().toISOString().slice(0,10);
+const initial={transactions:[],budgets:[{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}],goals:[{id:"g1",name:"Emergency fund",target:50000,saved:5000,icon:"🛟"},{id:"g2",name:"Education",target:40000,saved:8000,icon:"📚"}],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:10000};
+let data=load(),currency=data.currency||"KSh",supabase=null,user=null,modalKind="transaction",editId=null;
+function load(){try{return {...structuredClone(initial),...JSON.parse(localStorage.getItem(STORAGE)||"{}")}}catch{return structuredClone(initial)}}
+function save(){data.currency=currency;localStorage.setItem(STORAGE,JSON.stringify(data))}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function money(v){return currency+" "+Number(v||0).toLocaleString(undefined,{maximumFractionDigits:2})}
+function dateText(d){return d?new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"No date"}
+function toast(m){let t=$("#toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2600)}
+function totals(){let month=today().slice(0,7),tx=data.transactions.filter(x=>(x.date||"").startsWith(month));let income=tx.filter(x=>x.type==="income").reduce((s,x)=>s+Number(x.amount),0),expense=tx.filter(x=>x.type==="expense").reduce((s,x)=>s+Number(x.amount),0);return {income,expense,balance:income-expense}}
+function categorySpent(cat){let month=today().slice(0,7);return data.transactions.filter(x=>x.type==="expense"&&x.category===cat&&(x.date||"").startsWith(month)).reduce((s,x)=>s+Number(x.amount),0)}
+function row(icon,title,subtitle,value,kind="",extra=""){return '<div class="record-row"><div class="record-main"><span class="record-icon">'+icon+'</span><div class="record-text"><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div></div><div class="record-value '+kind+'">'+value+(extra?'<small>'+extra+'</small>':"")+'</div></div>'}
+function empty(msg){return '<div class="empty">'+esc(msg)+'</div>'}
+function render(){let t=totals(),pct=data.savingsTarget?Math.min(100,Math.round(data.goals.reduce((s,g)=>s+Number(g.saved),0)/data.savingsTarget*100)):0;
+$("#balanceValue").textContent=money(t.balance);$("#incomeValue").textContent=money(t.income);$("#expenseValue").textContent=money(t.expense);$("#savingsValue").textContent=pct+"%";$("#savingsProgress").style.width=pct+"%";
+let recent=[...data.transactions].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,5);
+$("#recentList").innerHTML=recent.map(x=>row(x.type==="income"?"🟢":"🧾",x.description,x.category+" · "+dateText(x.date),(x.type==="income"?"+":"−")+money(x.amount),x.type==="income"?"positive":"negative")).join("")||empty("No transactions yet. Tap Add transaction to start.");
+let budgetRows=data.budgets.map(b=>{let spent=categorySpent(b.category),p=b.limit?Math.min(100,Math.round(spent/b.limit*100)):0;return '<div class="record-row"><div class="record-main"><span class="record-icon">📅</span><div class="record-text"><strong>'+esc(b.name)+'</strong><small>'+money(spent)+' of '+money(b.limit)+'</small><div class="budget-progress"><span style="width:'+p+'%;background:'+(spent>b.limit?'#b96e42':'#4b9e70')+'"></span></div></div></div><div class="record-value">'+p+'%<small>'+(spent>b.limit?'Over limit':money(Math.max(0,b.limit-spent))+' left')+'</small></div></div>'}).join("")||empty("Add your first budget.");
+$("#homeBudgetList").innerHTML=budgetRows;$("#budgetsList").innerHTML=budgetRows;
+renderTransactions();renderGoals();renderBills();renderDebts();renderReports();renderFamily();
 }
-function renderBudgets(){
- const spentBy={};transactions.filter(x=>x.type==="expense").forEach(x=>spentBy[x.category]=(spentBy[x.category]||0)+Number(x.amount));
- const list=budgets.map(b=>({...b,spent:spentBy[b.category]||0}));
- document.getElementById("budgetList").innerHTML=list.map(b=>budgetHTML(b)).join("");
- document.getElementById("allBudgets").innerHTML=list.map(b=>budgetHTML(b)).join("");
- document.getElementById("budgetTotal").textContent=fmt(budgets.reduce((s,b)=>s+b.limit,0));
+function renderTransactions(){let search=($("#transactionSearch")?.value||"").toLowerCase(),type=$("#typeFilter")?.value||"all",cat=$("#categoryFilter")?.value||"all";let tx=[...data.transactions].filter(x=>(x.description+" "+x.category).toLowerCase().includes(search)&&(type==="all"||x.type===type)&&(cat==="all"||x.category===cat)).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+let cats=[...new Set(data.transactions.map(x=>x.category).filter(Boolean))];let select=$("#categoryFilter"),old=select.value;select.innerHTML='<option value="all">All categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join("");select.value=cats.includes(old)?old:"all";
+$("#transactionsList").innerHTML=tx.map(x=>row(x.type==="income"?"🟢":"🧾",x.description,x.category+" · "+dateText(x.date),(x.type==="income"?"+":"−")+money(x.amount),x.type==="income"?"positive":"negative")).join("")||empty("No matching transactions. Add one to get started.");
 }
-function budgetHTML(b){const pct=Math.min(100,Math.round(b.spent/b.limit*100));const over=b.spent>b.limit;return '<div class="budget-item"><div class="budget-item-top"><span class="budget-name"><span class="category-icon">'+b.icon+'</span>'+escapeHTML(b.name)+'</span><span class="budget-amount"><strong>'+fmt(b.spent)+'</strong> / '+fmt(b.limit)+'</span></div><div class="progress-track"><span style="width:'+pct+'%;background:'+(over?'#d87555':b.color)+'"></span></div><div class="budget-meta"><span>'+pct+'% used</span><span class="'+(over?'over':'')+'">'+(over?'Over budget by '+fmt(b.spent-b.limit):fmt(b.limit-b.spent)+' left')+'</span></div></div>'}
-function renderTransactions(){
- const sorted=[...transactions].sort((a,b)=>b.date.localeCompare(a.date));
- const rows=sorted.map(t=>'<tr><td><div class="transaction-name"><span class="transaction-icon '+(t.category==="Bills"||t.category==="Transport"?"orange":t.category==="Food"?"gold":"")+'">'+(t.icon||"•")+'</span>'+escapeHTML(t.description)+'</div></td><td><span class="category-tag">'+escapeHTML(t.category)+'</span></td><td>'+formatDate(t.date)+'</td><td class="'+(t.type==="income"?"amount-positive":"amount-negative")+'">'+(t.type==="income"?"+":"−")+fmt(t.amount)+'</td></tr>').join("");
- document.getElementById("recentTransactions").innerHTML=sorted.slice(0,5).map(t=>'<tr><td><div class="transaction-name"><span class="transaction-icon '+(t.category==="Bills"||t.category==="Transport"?"orange":t.category==="Food"?"gold":"")+'">'+(t.icon||"•")+'</span>'+escapeHTML(t.description)+'</div></td><td><span class="category-tag">'+escapeHTML(t.category)+'</span></td><td>'+formatDate(t.date)+'</td><td class="'+(t.type==="income"?"amount-positive":"amount-negative")+'">'+(t.type==="income"?"+":"−")+fmt(t.amount)+'</td></tr>').join("");
- document.getElementById("allTransactions").innerHTML=rows;
- document.getElementById("emptyTransactions").classList.toggle("hidden",sorted.length>0);
-}
-function escapeHTML(value){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function showPage(page){
- ["overview","transactions","budgets","goals","settings"].forEach(p=>document.getElementById(p+"Page").classList.toggle("hidden",p!==page));
- document.querySelectorAll(".nav-item[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
- document.getElementById("pageName").textContent=page==="goals"?"Savings goals":page.charAt(0).toUpperCase()+page.slice(1);
- document.getElementById("sidebar").classList.remove("open");
- window.scrollTo({top:0,behavior:"smooth"});
-}
-function openModal(){document.getElementById("transactionModal").classList.remove("hidden");document.getElementById("transactionDate").value=todayISO();document.body.style.overflow="hidden"}
-function closeModal(){document.getElementById("transactionModal").classList.add("hidden");document.body.style.overflow=""}
-function toast(message){const el=document.getElementById("toast");el.textContent=message;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600)}
-document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
-document.getElementById("addTransactionBtn").addEventListener("click",openModal);
-document.getElementById("addTransactionBtn2").addEventListener("click",openModal);
-document.getElementById("closeModal").addEventListener("click",closeModal);
-document.getElementById("cancelModal").addEventListener("click",closeModal);
-document.getElementById("transactionModal").addEventListener("click",e=>{if(e.target.id==="transactionModal")closeModal()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
-document.querySelectorAll('input[name="type"]').forEach(input=>input.addEventListener("change",()=>{const select=document.getElementById("categorySelect");if(input.checked&&input.value==="income")select.value="Salary"}));
-document.getElementById("transactionForm").addEventListener("submit",e=>{
- e.preventDefault();const form=new FormData(e.currentTarget);const amount=Number(form.get("amount"));if(!Number.isFinite(amount)||amount<=0){toast("Enter an amount greater than zero.");return}
- const type=form.get("type"),category=form.get("category");
- transactions.unshift({id:Date.now(),description:String(form.get("description")).trim(),category,date:form.get("date"),amount,type,icon:type==="income"?"↙":category==="Bills"?"ϟ":category==="Food"?"⌂":category==="Transport"?"↗":"•"});
- saveTransactions();render();closeModal();e.currentTarget.reset();toast("Transaction added to this preview.");
-});
-document.getElementById("resetDemo").addEventListener("click",()=>{transactions=[...initialTransactions];saveTransactions();render();toast("Sample preview data restored.")});
-document.getElementById("currencySelect").value=currency;
-document.getElementById("currencySelect").addEventListener("change",e=>{currency=e.target.value;localStorage.setItem("lb_currency",currency);render();toast("Currency display updated.")});
-document.getElementById("menuToggle").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));
-document.getElementById("monthLabel").textContent=new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"});
-document.getElementById("todayLabel").textContent=new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-render();
+function renderGoals(){$("#goalsList").innerHTML=data.goals.map(g=>{let p=g.target?Math.min(100,Math.round(g.saved/g.target*100)):0;return '<article class="tile"><span class="record-icon">'+(g.icon||"🎯")+'</span><h3>'+esc(g.name)+'</h3><div class="record-value">'+money(g.saved)+' <small>of '+money(g.target)+'</small></div><div class="budget-progress"><span style="width:'+p+'%"></span></div><p>'+p+'% reached</p><div class="button-row"><button class="btn outline" data-contribute="'+esc(g.id)+'">＋ Add savings</button><button class="btn outline" data-delete="goals" data-id="'+esc(g.id)+'">Delete</button></div></article>'}).join("")||empty("Create a savings goal to give your money a purpose.")}
+function renderBills(){$("#billsList").innerHTML=[...data.bills].sort((a,b)=>(a.due||"").localeCompare(b.due||"")).map(b=>row(b.paid?"✅":"🧾",b.name,(b.paid?"Paid":(b.due<today()?"Overdue":"Due"))+" · "+dateText(b.due),money(b.amount),"",'<button class="link-btn" data-paid="'+esc(b.id)+'">'+(b.paid?"Mark unpaid":"Mark paid")+'</button> <button class="link-btn" data-delete="bills" data-id="'+esc(b.id)+'">Delete</button>')).join("")||empty("No bills added yet.")}
+function renderDebts(){$("#debtsList").innerHTML=data.debts.map(d=>row(d.direction==="owed"?"↙":"↗",d.name,(d.direction==="owed"?"Money owed to you":"You owe")+(d.due?" · "+dateText(d.due):""),money(d.amount),"",'<button class="link-btn" data-delete="debts" data-id="'+esc(d.id)+'">Delete</button>')).join("")||empty("Track money borrowed or lent here.")}
+function renderReports(){let t=totals();$("#reportIncome").textContent=money(t.income);$("#reportExpense").textContent=money(t.expense);$("#reportBalance").textContent=money(t.balance);let obj={};data.transactions.filter(x=>x.type==="expense"&&(x.date||"").startsWith(today().slice(0,7))).forEach(x=>obj[x.category]=(obj[x.category]||0)+Number(x.amount));let entries=Object.entries(obj).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1]));$("#reportBars").innerHTML=entries.map(([k,v])=>'<div class="report-bar-row"><strong>'+esc(k)+'</strong><div class="report-bar"><span style="width:'+v/max*100+'%"></span></div><span>'+money(v)+'</span></div>').join("")||empty("Add expenses to see your spending report.")}
+function renderFamily(){$("#familyList").innerHTML=data.family.map(f=>row("👤",f.email,f.role==="editor"?"Can view and edit":"Can view","Invitation pending","","<button class='link-btn' data-delete='family' data-id='"+esc(f.id)+"'>Remove</button>")).join("")||""}
+const pages={home:["Your money at a glance","A simple view of your family’s finances."],transactions:["Transactions","Track income and spending in one place."],budgets:["Family budget","Plan household spending without the stress."],goals:["Savings goals","Turn your plans into achievable milestones."],bills:["Bills & reminders","Know what is due and what has been paid."],debts:["Debts & loans","Keep a clear record of money borrowed or lent."],reports:["Reports","Understand where your money goes."],family:["Family members","Plan together with people you trust."],settings:["Settings","Personalize your budgeting experience."],premium:["Living Budget Premium","More insight. More control."]};
+function showPage(p){if(!pages[p])p="home";Object.keys(pages).forEach(k=>$("#"+k+"Page")?.classList.toggle("hidden",k!==p));$$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===p));$("#pageTitle").textContent=pages[p][0];$("#pageSubtitle").textContent=pages[p][1];$("#eyebrow").textContent=p==="home"?"YOUR MONEY, WITH A PLAN":p.toUpperCase();$("#sidebar").classList.remove("open");window.scrollTo({top:0,behavior:"smooth"});if(p==="transactions")renderTransactions()}
+function field(name,label,type="text",value="",opts=null,required=true){let el=type==="select"?'<select name="'+name+'" '+(required?"required":"")+'>'+(opts||[]).map(o=>'<option value="'+esc(o.value??o)+'" '+((o.value??o)===value?"selected":"")+'>'+esc(o.label??o)+'</option>').join("")+'</select>':'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+(required?"required":"")+(type==="number"?' min="0" step="0.01"':'')+'>';return '<label class="field">'+label+el+'</label>'}
+function openModal(kind,defaultType=null){modalKind=kind;editId=null;let title="",fields="";
+if(kind==="transaction"){title="Add transaction";fields='<div class="field"><span>Type</span><select name="type"><option value="'+(defaultType||"expense")+'">'+(defaultType==="income"?"Income":"Expense")+'</option><option value="'+(defaultType==="income"?"expense":"income")+'">'+(defaultType==="income"?"Expense":"Income")+'</option></select></div>'+field("description","What was it for?","text","")+field("amount","Amount","number","")+field("category","Category","select","Food",["Food","Housing","Transport","Bills","School","Health","Personal","Salary","Business","Side hustle","Savings","Other"])+field("date","Date","date",today())}
+if(kind==="budget"){title="Create a budget";fields=field("name","Budget name","text","")+field("category","Category","select","Food",["Food","Housing","Transport","Bills","School","Health","Personal","Other"])+field("limit","Monthly spending limit","number","")}
+if(kind==="goal"){title="Create savings goal";fields=field("name","What are you saving for?","text","")+field("target","Goal amount","number","")+field("saved","Already saved","number","0")}
+if(kind==="contribute"){title="Add to savings";let g=data.goals.find(x=>x.id===defaultType);editId=g?.id;fields='<p class="muted">Add money to '+esc(g?.name||"your goal")+'.</p>'+field("amount","Amount to add","number","")}
+if(kind==="bill"){title="Add a bill";fields=field("name","Bill name","text","")+field("amount","Amount due","number","")+field("due","Due date","date",today())}
+if(kind==="debt"){title="Add a debt or loan";fields=field("name","Person or reason","text","")+field("direction","Type","select","owed",[{value:"owed",label:"Someone owes me"},{value:"owe",label:"I owe someone"}])+field("amount","Outstanding amount","number","")+field("due","Due date (optional)","date","",null,false)}
+$("#modalTitle").textContent=title;$("#modalFields").innerHTML=fields;$("#modal").classList.remove("hidden");document.body.style.overflow="hidden"}
+function closeModal(){$("#modal").classList.add("hidden");document.body.style.overflow=""}
+function exportCSV(filename,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}));a.download=filename;a.click();URL.revokeObjectURL(a.href)}
+function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);$("#connectionStatus").textContent="● Cloud ready";supabase.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user)cloudLoad()});supabase.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user)cloudLoad()})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
+function authUI(){$("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";$("#signOut").classList.toggle("hidden",!user);$("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready"}
+async function cloudLoad(){if(!supabase||!user)return;try{let {data:rows,error}=await supabase.from("lb_transactions").select("*").order("transaction_date",{ascending:false});if(error)throw error;data.transactions=(rows||[]).map(r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}));save();render();toast("Your cloud transactions are loaded.")}catch(e){console.warn(e);toast("Cloud tables are not ready yet. Preview data is still available.")}}
+async function cloudSaveTransaction(tx){if(!supabase||!user)return;let {error}=await supabase.from("lb_transactions").insert({user_id:user.id,description:tx.description,category:tx.category,transaction_date:tx.date,amount:tx.amount,type:tx.type});if(error){console.error(error);toast("Saved on this phone; cloud save needs setup.")}}
+$$("[data-page]").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+$("#quickAdd").addEventListener("click",()=>openModal("transaction"));$$("[data-action]").forEach(b=>b.addEventListener("click",()=>openModal("transaction",b.dataset.action)));
+$("#menuToggle").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));$("#closeModal").addEventListener("click",closeModal);$("#cancelModal").addEventListener("click",closeModal);$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+$("#addBudget").addEventListener("click",()=>openModal("budget"));$("#addGoal").addEventListener("click",()=>openModal("goal"));$("#addBill").addEventListener("click",()=>openModal("bill"));$("#addDebt").addEventListener("click",()=>openModal("debt"));
+document.addEventListener("click",e=>{let c=e.target.closest("[data-contribute]");if(c)openModal("contribute",c.dataset.contribute);let paid=e.target.closest("[data-paid]");if(paid){let b=data.bills.find(x=>x.id===paid.dataset.paid);if(b)b.paid=!b.paid;save();render()}let del=e.target.closest("[data-delete]");if(del&&confirm("Delete this record?")){let key=del.dataset.delete;data[key]=data[key].filter(x=>x.id!==del.dataset.id);save();render();toast("Record deleted.")}});
+$("#recordForm").addEventListener("submit",async e=>{e.preventDefault();let f=Object.fromEntries(new FormData(e.currentTarget));let id=Date.now().toString();if(modalKind==="transaction"){let tx={id,description:f.description.trim(),amount:Number(f.amount),category:f.category,date:f.date,type:f.type};data.transactions.push(tx);save();render();await cloudSaveTransaction(tx);toast("Transaction saved.")}if(modalKind==="budget"){data.budgets.push({id,name:f.name.trim(),category:f.category,limit:Number(f.limit)});save();render();toast("Budget created.")}if(modalKind==="goal"){data.goals.push({id,name:f.name.trim(),target:Number(f.target),saved:Number(f.saved||0),icon:"🎯"});save();render();toast("Savings goal created.")}if(modalKind==="contribute"){let g=data.goals.find(x=>x.id===editId);if(g){g.saved=Number(g.saved)+Number(f.amount);save();render();toast("Savings updated.")}}if(modalKind==="bill"){data.bills.push({id,name:f.name.trim(),amount:Number(f.amount),due:f.due,paid:false});save();render();toast("Bill added.")}if(modalKind==="debt"){data.debts.push({id,name:f.name.trim(),direction:f.direction,amount:Number(f.amount),due:f.due});save();render();toast("Debt record added.")}closeModal();e.currentTarget.reset()});
+$("#transactionSearch").addEventListener("input",renderTransactions);$("#typeFilter").addEventListener("change",renderTransactions);$("#categoryFilter").addEventListener("change",renderTransactions);
+$("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["Living Budget monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
+$("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
+$("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
+$("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabase){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;authUI();if(user)cloudLoad()}});
+$("#signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.signOut();user=null;authUI();toast("Signed out.")});
+$("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
+initSupabase();render();
