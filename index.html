@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-transactionfix3">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-transactionfix3"></script><script src="./app.js?v=20261025-transactionfix3" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-transactionfix4">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-transactionfix4"></script><script src="./app.js?v=20261025-transactionfix4" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -143,6 +143,30 @@
     if(event.target.closest("#closeModal,#cancelModal")||event.target.id==="modal"){document.getElementById("modal")?.classList.add("hidden");document.body.style.overflow="";}
   },true);
 
+  // Reliable fallback save path for transaction form if app.js submit binding fails.
+  document.getElementById("recordForm")?.addEventListener("submit",async function(event){
+    const form=event.currentTarget;
+    if(!form.querySelector('[name="description"]')||!form.querySelector('[name="amount"]'))return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const fields=new FormData(form);
+    const tx={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()),type:String(fields.get("type")||"expense"),description:String(fields.get("description")||"").trim(),amount:Number(fields.get("amount")),category:String(fields.get("category")||"Other"),date:String(fields.get("date")||new Date().toISOString().slice(0,10))};
+    const toast=document.getElementById("toast");
+    if(!tx.description||!Number.isFinite(tx.amount)||tx.amount<=0){if(toast){toast.textContent="Enter a description and an amount greater than zero.";toast.classList.add("show");}return;}
+    try{
+      const key="living_budget_v1",old=JSON.parse(localStorage.getItem(key)||"{}");
+      old.transactions=Array.isArray(old.transactions)?old.transactions:[];
+      old.transactions.push(tx);localStorage.setItem(key,JSON.stringify(old));
+      const client=getAuthClient();
+      if(client){const auth=await client.auth.getUser();const uid=auth.data?.user?.id;
+        if(uid){const result=await client.from("lb_transactions").insert({user_id:uid,description:tx.description,category:tx.category,transaction_date:tx.date,amount:tx.amount,type:tx.type});
+          if(result.error)console.warn("Cloud transaction save failed:",result.error.message);
+        }
+      }
+      document.getElementById("modal")?.classList.add("hidden");
+      if(toast){toast.textContent="Transaction saved. Opening Activity…";toast.classList.add("show");}
+      setTimeout(()=>window.location.href=window.location.pathname+"?v=20261025-transactionfix4#transactions",250);
+    }catch(error){console.error(error);if(toast){toast.textContent="Could not save transaction. Please try again.";toast.classList.add("show");}}
+  },true);
   window.addEventListener("error",function(e){console.error("Living Budget JavaScript error:",e.message,e.filename,e.lineno);});
 })();
 </script>
