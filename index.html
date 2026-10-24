@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-authfix1">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-authfix1"></script><script src="./app.js?v=20261025-authfix1" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-sessionfix2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-sessionfix2"></script><script src="./app.js?v=20261025-sessionfix2" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -84,6 +84,7 @@
   }
   let fallbackAuthClient=null;
   function getAuthClient(){
+    if(window.livingBudgetSupabase)return window.livingBudgetSupabase;
     if(fallbackAuthClient)return fallbackAuthClient;
     const cfg=window.APP_CONFIG;
     if(window.supabase&&cfg&&cfg.SUPABASE_URL&&cfg.SUPABASE_KEY){
@@ -115,7 +116,15 @@
         document.body.classList.remove("landing-mode");
         document.getElementById("connectionStatus").textContent="● Signed in";
         if(msg)msg.textContent="Signed in successfully. Loading your budget…";
-        window.location.reload();
+        if(window.livingBudgetSupabase){
+          const sessionResult=await window.livingBudgetSupabase.auth.getSession();
+          if(sessionResult.data?.session){
+            document.body.classList.remove("landing-mode");
+            document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!=="homePage"));
+            const title=document.getElementById("pageTitle");if(title)title.textContent="Your money at a glance";
+            window.scrollTo(0,0);
+          }
+        }
       } else if(msg) msg.textContent="Account created. Please check your email, then sign in.";
     }catch(error){if(msg)msg.textContent=error?.message||"Connection failed. Check your internet and try again.";}
     finally{if(submit){submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}}
