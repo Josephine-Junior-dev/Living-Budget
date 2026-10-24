@@ -154,6 +154,23 @@ async function shareContent(title,textContent){
   const box=document.createElement("textarea");box.value=textContent;box.setAttribute("readonly","");box.style.position="fixed";box.style.opacity="0";document.body.appendChild(box);box.select();const ok=document.execCommand("copy");box.remove();toast(ok?"Copied to clipboard. You can now paste and share it.":"Sharing is not supported on this browser.");
  }catch(e){if(e?.name!=="AbortError")toast("Could not share. Try Export CSV instead.");}
 }
+function currentPageShareText(){
+ const active=$$(".page").find(el=>!el.classList.contains("hidden"));
+ const key=(active?.id||"homePage").replace(/Page$/,"");
+ const lines=[];
+ const add=(title,items)=>{lines.push(title);if(!items.length){lines.push("No records.");return;}for(const item of items)lines.push(item);};
+ if(key==="transactions")return buildTransactionShareText();
+ if(key==="reports"||key==="home")return buildReportShareText();
+ if(key==="budgets")add("Living Budget — Budgets",data.budgets.map(x=>x.name+" | "+x.category+" | Limit "+money(x.limit)));
+ else if(key==="goals")add("Living Budget — Savings Goals",data.goals.map(x=>x.name+" | Saved "+money(x.saved)+" of "+money(x.target)));
+ else if(key==="bills")add("Living Budget — Bills",data.bills.map(x=>x.name+" | "+money(x.amount)+" | Due "+(x.due||"") +" | "+(x.paid?"Paid":"Unpaid")));
+ else if(key==="debts")add("Living Budget — Debts & Loans",data.debts.map(x=>x.name+" | "+(x.direction==="owed"?"Owed to you":"You owe")+" | Balance "+money(x.amount)));
+ else if(key==="family")add("Living Budget — Family",data.family.map(x=>x.email+" | "+x.role+" | Invitation pending"));
+ else lines.push("Living Budget — "+(pages[key]?.[0]||"My Budget"));
+ return lines.join("\n");
+}
+$("#shareCurrentPage")?.addEventListener("click",()=>shareContent("Living Budget",currentPageShareText()));
+$("#printCurrentPage")?.addEventListener("click",()=>window.print());
 $("#shareTransactions")?.addEventListener("click",()=>shareContent("Living Budget Transactions",buildTransactionShareText()));
 $("#shareReport")?.addEventListener("click",()=>shareContent("Living Budget Monthly Report",buildReportShareText()));
 $("#printTransactions")?.addEventListener("click",()=>{showPage("transactions");window.setTimeout(()=>window.print(),100)});
