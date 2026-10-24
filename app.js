@@ -102,6 +102,26 @@ if(modalKind==="debt"){let x={id,name:f.name.trim(),direction:f.direction,amount
 closeModal();e.currentTarget.reset();editId=null;
 });
 $("#transactionSearch").addEventListener("input",renderTransactions);$("#typeFilter").addEventListener("change",renderTransactions);$("#categoryFilter").addEventListener("change",renderTransactions);
+function buildTransactionShareText(){
+ const rows=[["Date","Description","Type","Category","Amount"],...data.transactions.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map(x=>[x.date,x.description,x.type,x.category,x.amount])];
+ return "Living Budget — Transactions\n"+rows.map(r=>r.join(" | ")).join("\n");
+}
+function buildReportShareText(){
+ const t=totals(),month=today().slice(0,7),groups={};
+ data.transactions.filter(x=>x.type==="expense"&&(x.date||"").startsWith(month)).forEach(x=>groups[x.category]=(groups[x.category]||0)+Number(x.amount));
+ return "Living Budget — Monthly Report ("+month+")\nIncome: "+money(t.income)+"\nExpenses: "+money(t.expense)+"\nBalance: "+money(t.balance)+"\n\nSpending by category:\n"+(Object.entries(groups).map(([k,v])=>k+": "+money(v)).join("\n")||"No expenses recorded.");
+}
+async function shareContent(title,textContent){
+ try{
+  if(navigator.share){await navigator.share({title,text:textContent});return;}
+  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(textContent);toast("Copied to clipboard. You can now paste and share it.");return;}
+  const box=document.createElement("textarea");box.value=textContent;box.setAttribute("readonly","");box.style.position="fixed";box.style.opacity="0";document.body.appendChild(box);box.select();const ok=document.execCommand("copy");box.remove();toast(ok?"Copied to clipboard. You can now paste and share it.":"Sharing is not supported on this browser.");
+ }catch(e){if(e?.name!=="AbortError")toast("Could not share. Try Export CSV instead.");}
+}
+$("#shareTransactions")?.addEventListener("click",()=>shareContent("Living Budget Transactions",buildTransactionShareText()));
+$("#shareReport")?.addEventListener("click",()=>shareContent("Living Budget Monthly Report",buildReportShareText()));
+$("#printTransactions")?.addEventListener("click",()=>{showPage("transactions");window.setTimeout(()=>window.print(),100)});
+$("#printReport")?.addEventListener("click",()=>{showPage("reports");window.setTimeout(()=>window.print(),100)});
 $("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["Living Budget monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
 $("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
 $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
