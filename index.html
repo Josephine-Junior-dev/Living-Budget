@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-fix1">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-fix1"></script><script src="./app.js?v=20261025-fix1" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-fix2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-fix2"></script><script src="./app.js?v=20261025-fix2" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -87,7 +87,7 @@
       const title=$("#pageTitle");if(title)title.textContent="Your money at a glance";
       const status=$("#connectionStatus");if(status)status.textContent="● Signed in";
       window.scrollTo(0,0);
-      if(window.livingBudgetSupabase){const u=await window.livingBudgetSupabase.auth.getUser();if(u.data?.user)window.dispatchEvent(new CustomEvent("livingbudget:signedin"));}
+      window.dispatchEvent(new CustomEvent("livingbudget:signedin"));
     }catch(err){message.textContent=err?.message||"Unable to sign in. Check your internet and try again.";}
     finally{button.disabled=false;button.textContent=mode==="signup"?"Create account":"Sign in";}
   },true);
