@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-navy2">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-navy2"></script><script src="./app.js?v=20261025-navy2" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-jsfix1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-jsfix1"></script><script src="./app.js?v=20261025-jsfix1" defer></script>
 </head>
 <body>
 <header class="topbar"><a class="brand" href="#" data-page="home"><span class="brand-icon">L+</span><span><b>Living Budget</b><small>Plan wisely. Spend smartly.</small></span></a><button id="menuToggle" class="menu-btn" aria-label="Open navigation">☰</button><div class="user-area"><span id="connectionStatus" class="status-dot">● Preview mode</span><button id="accountButton" class="avatar">👤</button></div></header>
@@ -32,4 +32,44 @@
 </main></div>
 <nav class="mobile-nav"><button class="active" data-page="home">🏠<small>Home</small></button><button data-page="transactions">💳<small>Activity</small></button><button data-page="budgets">📅<small>Budget</small></button><button data-page="goals">🎯<small>Goals</small></button><button data-page="settings">👤<small>Profile</small></button></nav>
 <div id="modal" class="modal-backdrop hidden"><form id="recordForm" class="modal-card"><div class="modal-head"><div><p class="eyebrow">LIVING BUDGET</p><h2 id="modalTitle">Add record</h2></div><button type="button" id="closeModal" class="close-btn" aria-label="Close">×</button></div><div id="modalFields"></div><div class="button-row modal-actions"><button type="button" id="cancelModal" class="btn outline">Cancel</button><button class="btn primary" type="submit">Save</button></div></form></div><div id="toast" class="toast" role="status"></div>
+
+<script>
+/* Safety fallback: keep navigation usable even if app.js hits a runtime error. */
+document.addEventListener("click", function(event) {
+  const nav = event.target.closest("[data-page]");
+  if (nav) {
+    event.preventDefault();
+    const page = nav.dataset.page;
+    if (typeof window.showPage === "function") window.showPage(page);
+    else {
+      document.querySelectorAll(".page").forEach(el => el.classList.toggle("hidden", el.id !== page + "Page"));
+      document.querySelectorAll("[data-page]").forEach(el => el.classList.toggle("active", el.dataset.page === page));
+      const titles = {home:"Your money at a glance",transactions:"Transactions",budgets:"Family budget",goals:"Savings goals",bills:"Bills & reminders",debts:"Debts & loans",reports:"Reports",family:"Family members",settings:"Settings",premium:"Living Budget Premium"};
+      const title = document.getElementById("pageTitle"); if (title) title.textContent = titles[page] || "Living Budget";
+      document.getElementById("sidebar")?.classList.remove("open");
+    }
+    return;
+  }
+  const action = event.target.closest("[data-action]");
+  if (action) {
+    if (typeof window.openModal === "function") window.openModal("transaction", action.dataset.action);
+    else showBasicTransactionForm(action.dataset.action);
+    return;
+  }
+  if (event.target.closest("#quickAdd")) {
+    if (typeof window.openModal === "function") window.openModal("transaction");
+    else showBasicTransactionForm("expense");
+  }
+});
+function showBasicTransactionForm(type) {
+  const modal = document.getElementById("modal"), fields = document.getElementById("modalFields"), title = document.getElementById("modalTitle");
+  if (!modal || !fields) return;
+  if (title) title.textContent = "Add transaction";
+  fields.innerHTML = '<label class="field">Type<select name="fallbackType"><option value="expense">Expense</option><option value="income">Income</option></select></label><label class="field">Description<input id="fallbackDescription" placeholder="What was it for?"></label><label class="field">Amount<input id="fallbackAmount" type="number" min="0" step="0.01"></label>';
+  fields.querySelector("select").value = type || "expense";
+  modal.classList.remove("hidden");
+}
+document.getElementById("menuToggle")?.addEventListener("click", function(){ document.getElementById("sidebar")?.classList.toggle("open"); });
+</script>
+
 </body></html>
