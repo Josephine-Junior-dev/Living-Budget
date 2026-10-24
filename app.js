@@ -47,7 +47,13 @@ $("#modalTitle").textContent=title;$("#modalFields").innerHTML=fields;$("#modal"
 function closeModal(){$("#modal").classList.add("hidden");document.body.style.overflow=""}
 function exportCSV(filename,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}));a.download=filename;a.click();URL.revokeObjectURL(a.href)}
 function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);$("#connectionStatus").textContent="● Cloud ready";supabase.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user)cloudLoad()});supabase.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user)cloudLoad()})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
-function authUI(){$("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";$("#signOut").classList.toggle("hidden",!user);$("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready"}
+function authUI(){
+ $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
+ $("#signOut").classList.toggle("hidden",!user);
+ $("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready";
+ document.body.classList.toggle("landing-mode",!user);
+ $("#landingPage")?.classList.toggle("hidden",!!user);
+}
 async function cloudLoad(){if(!supabase||!user)return;try{let {data:rows,error}=await supabase.from("lb_transactions").select("*").order("transaction_date",{ascending:false});if(error)throw error;data.transactions=(rows||[]).map(r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}));save();render();toast("Your cloud transactions are loaded.")}catch(e){console.warn(e);toast("Cloud tables are not ready yet. Preview data is still available.")}}
 async function cloudSaveTransaction(tx){if(!supabase||!user)return;let {error}=await supabase.from("lb_transactions").insert({user_id:user.id,description:tx.description,category:tx.category,transaction_date:tx.date,amount:tx.amount,type:tx.type});if(error){console.error(error);toast("Saved on this phone; cloud save needs setup.")}}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
@@ -69,4 +75,39 @@ $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new Form
 $("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabase){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;authUI();if(user)cloudLoad()}});
 $("#signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.signOut();user=null;authUI();toast("Signed out.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
+
+/* Public welcome page authentication */
+let landingMode="signup";
+function setLandingMode(mode){
+ landingMode=mode==="signin"?"signin":"signup";
+ $("#landingAuthPanel")?.classList.remove("hidden");
+ $("#landingAuthTitle").textContent=landingMode==="signup"?"Create your free account":"Welcome back";
+ $("#landingAuthIntro").textContent=landingMode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
+ $("#landingAuthSubmit").textContent=landingMode==="signup"?"Create account":"Sign in";
+ $("#landingSwitchMode").textContent=landingMode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
+ $("#landingAuthMessage").textContent="";
+ $("#landingAuthForm input[name=password]").autocomplete=landingMode==="signup"?"new-password":"current-password";
+ $("#landingAuthPanel").scrollIntoView({behavior:"smooth",block:"center"});
+}
+document.addEventListener("click",e=>{
+ const mode=e.target.closest("[data-landing-mode]");
+ if(mode){setLandingMode(mode.dataset.landingMode);return;}
+ if(e.target.closest("#landingBack")){$("#landingAuthPanel").classList.add("hidden");return;}
+ if(e.target.closest("#landingSwitchMode")){setLandingMode(landingMode==="signup"?"signin":"signup");}
+});
+$("#landingAuthForm")?.addEventListener("submit",async e=>{
+ e.preventDefault();
+ const message=$("#landingAuthMessage");
+ if(!supabase){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
+ const f=new FormData(e.currentTarget),email=String(f.get("email")||""),password=String(f.get("password")||"");
+ const submit=$("#landingAuthSubmit");submit.disabled=true;submit.textContent="Please wait…";
+ try{
+  const result=landingMode==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});
+  if(result.error)message.textContent=result.error.message;
+  else if(landingMode==="signup"&&!result.data.session)message.textContent="Account created. Please check your email to confirm, then sign in here.";
+  else if(result.data.user){user=result.data.user;authUI();message.textContent="Signed in successfully.";cloudLoad();}
+ }catch(err){message.textContent=err.message||"Unable to connect. Please try again.";}
+ finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
+});
+
 initSupabase();render();
