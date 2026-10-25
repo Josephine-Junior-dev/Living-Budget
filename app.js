@@ -135,6 +135,7 @@ async function cloudUpsert(kind,item){if(!supabaseClient||!user||!cloudMap[kind]
 async function cloudDelete(kind,id){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
 document.addEventListener("click",e=>{
+ const summary=e.target.closest("[data-summary-link]");if(summary){e.preventDefault();const dest=summary.dataset.summaryLink;showPage(dest);if(dest==="transactions"){const filter=summary.dataset.summaryFilter;const typeFilter=$("#typeFilter");if(typeFilter)typeFilter.value=filter||"all";renderTransactions();}return;}
  const nav=e.target.closest("[data-page]");
  if(nav){e.preventDefault();showPage(nav.dataset.page);return;}
  /* Make the whole Premium upgrade card tappable on phones, not only its button. */
