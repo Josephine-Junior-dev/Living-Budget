@@ -193,3 +193,6 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
  .record-row{break-inside:avoid}
  .footer{display:flex!important}
 }
+
+/* Native anchor fallback: the sign-in panel can open even if app.js fails to load. */
+#landingAuthPanel:target{display:block!important}
