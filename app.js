@@ -210,22 +210,8 @@ $("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supaba
 $("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;landingDismissed=false;authUI();toast("Signed out.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
-/* Public welcome page authentication: email or phone + password. */
-let landingMode="signup",landingExplicitSubmit=false,landingPendingPhone="";
-const landingMethod=$("#landingAuthMethod");
-function setLandingMethod(method){
- const phone=method==="phone";
- $("#landingEmailField").classList.toggle("hidden",phone);
- $("#landingEmailField input").disabled=phone;
- $("#landingEmailField input").required=!phone;
- $("#landingPhoneField").classList.toggle("hidden",!phone);
- $("#landingPhoneField input").disabled=!phone;
- $("#landingPhoneField input").required=phone;
- if(!phone){landingPendingPhone="";$("#landingOtpField").classList.add("hidden");$("#landingOtpField input").disabled=true;$("#landingOtpField input").required=false;}
-}
-landingMethod?.addEventListener("change",()=>{setLandingMethod(landingMethod.value);$("#landingAuthMessage").textContent="";});
-setLandingMethod(landingMethod?.value||"email");
-// Only a real tap/click on the visible button may start authentication.
+/* Public welcome page authentication: email + password only. */
+let landingMode="signup",landingExplicitSubmit=false;
 $("#landingAuthSubmit")?.addEventListener("click",()=>{landingExplicitSubmit=true;});
 function setLandingMode(mode){
  landingMode=mode==="signin"?"signin":"signup";
@@ -244,13 +230,6 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#landingBack")){$("#landingAuthPanel").classList.add("hidden");return;}
  if(e.target.closest("#landingSwitchMode")){setLandingMode(landingMode==="signup"?"signin":"signup");}
 });
-function normalizeKenyanPhone(raw){
- let p=String(raw||"").trim().replace(/[\s()-]/g,"");
- if(/^0[17]\d{8}$/.test(p))return "+254"+p.slice(1);
- if(/^254[17]\d{8}$/.test(p))return "+"+p;
- if(/^\+254[17]\d{8}$/.test(p))return p;
- return p.startsWith("+")?p:"";
-}
 async function finishLandingSignIn(result,message){
  if(result.error){message.textContent=result.error.message;return false;}
  if(result.data?.session&&result.data?.user){
@@ -266,43 +245,21 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
  if(!landingExplicitSubmit){message.textContent="Your details are ready. Tap the button to continue.";return;}
  landingExplicitSubmit=false;
  if(!supabaseClient){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
- const f=new FormData(e.currentTarget),method=String(f.get("authMethod")||"email"),password=String(f.get("password")||"");
- let email=String(f.get("email")||"").trim(),phone=normalizeKenyanPhone(f.get("phone"));
- if(method==="phone"&&!phone&&!landingPendingPhone){message.textContent="Enter a valid phone number, e.g. 0712345678 or +254712345678.";return;}
+ const f=new FormData(e.currentTarget),email=String(f.get("email")||"").trim(),password=String(f.get("password")||"");
+ if(!email){message.textContent="Enter your email address.";return;}
  const submit=$("#landingAuthSubmit");submit.disabled=true;submit.textContent="Please wait…";
  try{
-  if(landingPendingPhone){
-   const token=String(f.get("otp")||"").trim();
-   if(!token){message.textContent="Enter the SMS verification code first.";return;}
-   const result=await supabaseClient.auth.verifyOtp({phone:landingPendingPhone,token,type:"sms"});
-   if(await finishLandingSignIn(result,message)){landingPendingPhone="";$("#landingOtpField").classList.add("hidden");$("#landingOtpField input").disabled=true;}
-   return;
-  }
-  let result;
-  if(method==="phone"){
-   result=landingMode==="signup"
-    ?await supabaseClient.auth.signUp({phone,password})
-    :await supabaseClient.auth.signInWithPassword({phone,password});
-  }else{
-   result=landingMode==="signup"
-    ?await supabaseClient.auth.signUp({email,password})
-    :await supabaseClient.auth.signInWithPassword({email,password});
-  }
+  const result=landingMode==="signup"
+   ?await supabaseClient.auth.signUp({email,password})
+   :await supabaseClient.auth.signInWithPassword({email,password});
   if(result.error){message.textContent=result.error.message;return;}
   if(landingMode==="signup"&&!result.data.session){
-   if(method==="phone"&&result.data.user){
-    landingPendingPhone=phone;
-    $("#landingOtpField").classList.remove("hidden");$("#landingOtpField input").disabled=false;$("#landingOtpField input").required=true;
-    submit.textContent="Verify SMS code";
-    message.textContent="We sent a verification code by SMS. Enter it above, then tap Verify SMS code.";
-   }else{
-    message.textContent="Account created. Please check your email to confirm, then sign in here.";
-   }
+   message.textContent="Account created. Please check your email to confirm, then sign in here.";
    return;
   }
   await finishLandingSignIn(result,message);
  }catch(err){message.textContent=err.message||"Unable to connect. Please try again.";}
- finally{submit.disabled=false;if(!landingPendingPhone)submit.textContent=landingMode==="signup"?"Create account":"Sign in";else submit.textContent="Verify SMS code";}
+ finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
 });
 // Clean login links safely: never keep a password in the browser URL/history.
 // If an email was supplied in the URL, open the sign-in form and prefill only the email.
