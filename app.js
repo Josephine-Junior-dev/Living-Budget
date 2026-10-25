@@ -99,16 +99,24 @@ const cloudMap={
 };
 async function cloudLoad(){
  if(!supabaseClient||!user)return;
- if(window.__livingBudgetCloudLoading)return window.__livingBudgetCloudLoading;
+ if(window.__livingBudgetCloudLoading&&window.__livingBudgetCloudLoadingUser===user.id)return window.__livingBudgetCloudLoading;
  const accountId=user.id;
+ window.__livingBudgetCloudLoadingUser=accountId;
  window.__livingBudgetCloudLoading=(async()=>{
+  const localSnapshot={};
+  for(const key of Object.keys(cloudMap))localSnapshot[key]=Array.isArray(data[key])?data[key].map(x=>({...x})):[];
+  const pendingUploads=[];
   let anyLoaded=false,hadError=false;
   for(const [key,m] of Object.entries(cloudMap)){
    try{
     const {data:rows,error}=await supabaseClient.from(m.table).select("*").eq("user_id",accountId).order(m.sort,{ascending:false});
     if(error)throw error;
     if(!user||user.id!==accountId)return;
-    data[key]=(rows||[]).map(m.from);
+    const remote=(rows||[]).map(m.from),remoteIds=new Set(remote.map(x=>String(x.id)));
+    const local=localSnapshot[key],merged=new Map();
+    for(const item of local){merged.set(String(item.id),item);if(!remoteIds.has(String(item.id)))pendingUploads.push({key,item});}
+    for(const item of remote)merged.set(String(item.id),item);
+    data[key]=[...merged.values()];
     anyLoaded=true;
    }catch(err){
     hadError=true;
@@ -117,9 +125,10 @@ async function cloudLoad(){
   }
   if(!user||user.id!==accountId)return;
   save();render();
+  for(const pending of pendingUploads){if(!user||user.id!==accountId)return;await cloudUpsert(pending.key,pending.item);}
   if(hadError)toast(anyLoaded?"Some cloud records could not load. Please check Supabase permissions.":"Cloud data could not load. Check the database setup and internet connection.");
   else toast("Your private account records are loaded.");
- })().finally(()=>{window.__livingBudgetCloudLoading=null;});
+ })().finally(()=>{if(window.__livingBudgetCloudLoadingUser===accountId){window.__livingBudgetCloudLoading=null;window.__livingBudgetCloudLoadingUser=null;}});
  return window.__livingBudgetCloudLoading;
 }
 async function cloudUpsert(kind,item){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
