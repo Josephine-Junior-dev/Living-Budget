@@ -245,10 +245,10 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#landingSwitchMode")){setLandingMode(landingMode==="signup"?"signin":"signup");}
 });
 function normalizeKenyanPhone(raw){
- let p=String(raw||"").trim().replace(/[\\s()-]/g,"");
- if(/^0[17]\\d{8}$/.test(p))return "+254"+p.slice(1);
- if(/^254[17]\\d{8}$/.test(p))return "+"+p;
- if(/^\\+254[17]\\d{8}$/.test(p))return p;
+ let p=String(raw||"").trim().replace(/[\s()-]/g,"");
+ if(/^0[17]\d{8}$/.test(p))return "+254"+p.slice(1);
+ if(/^254[17]\d{8}$/.test(p))return "+"+p;
+ if(/^\+254[17]\d{8}$/.test(p))return p;
  return p.startsWith("+")?p:"";
 }
 async function finishLandingSignIn(result,message){
