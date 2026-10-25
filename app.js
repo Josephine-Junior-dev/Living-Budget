@@ -140,6 +140,9 @@ async function cloudDelete(kind,id){if(!supabaseClient||!user||!cloudMap[kind])r
 document.addEventListener("click",e=>{
  const nav=e.target.closest("[data-page]");
  if(nav){e.preventDefault();showPage(nav.dataset.page);return;}
+ /* Make the whole Premium upgrade card tappable on phones, not only its button. */
+ const premiumCard=e.target.closest(".upgrade-card");
+ if(premiumCard){showPage("premium");return;}
  const action=e.target.closest("[data-action]");
  if(action){openModal("transaction",action.dataset.action);return;}
  if(e.target.closest("#quickAdd"))openModal("transaction");
