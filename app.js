@@ -270,7 +270,7 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
   const hadLoginParams=url.searchParams.has("email")||url.searchParams.has("password")||url.searchParams.has("phone");
   if(email){
    const emailInput=$("#landingAuthForm input[name=email]");
-   if(emailInput){emailInput.value=email;$("#landingAuthMethod").value="email";setLandingMethod("email");}
+   if(emailInput)emailInput.value=email;
    setLandingMode("signin");
   }
   if(hadLoginParams){
