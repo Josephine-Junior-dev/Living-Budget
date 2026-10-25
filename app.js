@@ -211,7 +211,9 @@ $("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabas
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication */
-let landingMode="signup";
+let landingMode="signup",landingExplicitSubmit=false;
+// Only a real tap/click on the visible button may start authentication.
+$("#landingAuthSubmit")?.addEventListener("click",()=>{landingExplicitSubmit=true;});
 function setLandingMode(mode){
  landingMode=mode==="signin"?"signin":"signup";
  $("#landingAuthPanel")?.classList.remove("hidden");
@@ -232,6 +234,8 @@ document.addEventListener("click",e=>{
 $("#landingAuthForm")?.addEventListener("submit",async e=>{
  e.preventDefault();
  const message=$("#landingAuthMessage");
+ if(!landingExplicitSubmit){message.textContent="Your details are ready. Tap the Sign in button to continue.";return;}
+ landingExplicitSubmit=false;
  if(!supabaseClient){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
  const f=new FormData(e.currentTarget),email=String(f.get("email")||""),password=String(f.get("password")||"");
  const submit=$("#landingAuthSubmit");submit.disabled=true;submit.textContent="Please wait…";
