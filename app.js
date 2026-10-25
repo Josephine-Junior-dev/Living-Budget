@@ -51,7 +51,35 @@ function openModal(kind,defaultType=null){
  $("#modalTitle").textContent=title;$("#modalFields").innerHTML=fields;$("#modal").classList.remove("hidden");document.body.style.overflow="hidden";
 }function closeModal(){$("#modal").classList.add("hidden");document.body.style.overflow=""}
 function exportCSV(filename,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}));a.download=filename;a.click();URL.revokeObjectURL(a.href)}
-function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabaseClient=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);window.livingBudgetSupabase=supabaseClient;$("#connectionStatus").textContent="● Cloud ready";supabaseClient.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();});supabaseClient.auth.onAuthStateChange((event,s)=>{user=s?.user||null;if(event==="SIGNED_IN")landingDismissed=true;if(event==="SIGNED_OUT")landingDismissed=false;authUI();if(user&&landingDismissed){showPage("home");cloudLoad().catch(e=>{console.error("Cloud sync failed:",e);});}})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
+function initSupabase(){
+ let c=window.APP_CONFIG;
+ if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){
+  $("#connectionStatus").textContent="● Preview mode";
+  authUI();
+  return;
+ }
+ try{
+  supabaseClient=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);
+  window.livingBudgetSupabase=supabaseClient;
+  $("#connectionStatus").textContent="● Cloud ready";
+  supabaseClient.auth.getSession().then(({data:d})=>{
+   user=d.session?.user||null;
+   authUI();
+   // Restoring an existing session must not skip the welcome page.
+   if(user&&landingDismissed)cloudLoad().catch(e=>console.error("Cloud sync failed:",e));
+  }).catch(e=>{console.error("Session check failed:",e);authUI();});
+  supabaseClient.auth.onAuthStateChange((event,s)=>{
+   user=s?.user||null;
+   // Only the landing form explicitly dismisses the welcome page.
+   authUI();
+   if(user&&landingDismissed)cloudLoad().catch(e=>console.error("Cloud sync failed:",e));
+  });
+ }catch(e){
+  console.error(e);
+  $("#connectionStatus").textContent="● Preview mode";
+  authUI();
+ }
+}
 function authUI(){
  $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
  $("#signOut").classList.toggle("hidden",!user);
