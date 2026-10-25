@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget</title>
-<link rel="stylesheet" href="./style.css?v=20261025-fix2">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-fix2"></script><script src="./app.js?v=20261025-fix2" defer></script>
+<link rel="stylesheet" href="./style.css?v=20261025-fix3">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261025-fix3"></script><script src="./app.js?v=20261025-fix3" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -39,60 +39,5 @@
 </main></div>
 <nav class="mobile-nav"><button class="active" data-page="home">🏠<small>Home</small></button><button data-page="transactions">💳<small>Activity</small></button><button data-page="budgets">📅<small>Budget</small></button><button data-page="goals">🎯<small>Goals</small></button><button data-page="settings">👤<small>Profile</small></button></nav>
 <div id="modal" class="modal-backdrop hidden"><form id="recordForm" class="modal-card"><div class="modal-head"><div><p class="eyebrow">LIVING BUDGET</p><h2 id="modalTitle">Add record</h2></div><button type="button" id="closeModal" class="close-btn" aria-label="Close">×</button></div><div id="modalFields"></div><div class="button-row modal-actions"><button type="button" id="cancelModal" class="btn outline">Cancel</button><button class="btn primary" type="submit">Save</button></div></form></div><div id="toast" class="toast" role="status"></div>
-
-<script>
-/* Landing-page authentication only. App navigation, cards, and CRUD are handled by app.js. */
-(function(){
-  let mode="signup", client=null;
-  const $=s=>document.querySelector(s);
-  function authClient(){
-    if(window.livingBudgetSupabase)return window.livingBudgetSupabase;
-    if(client)return client;
-    const c=window.APP_CONFIG;
-    if(window.supabase&&c?.SUPABASE_URL&&c?.SUPABASE_KEY)client=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);
-    return client;
-  }
-  function setMode(next){
-    mode=next==="signin"?"signin":"signup";
-    $("#landingAuthPanel")?.classList.remove("hidden");
-    $("#landingAuthTitle").textContent=mode==="signup"?"Create your free account":"Welcome back";
-    $("#landingAuthIntro").textContent=mode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
-    $("#landingAuthSubmit").textContent=mode==="signup"?"Create account":"Sign in";
-    $("#landingSwitchMode").textContent=mode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
-    $("#landingAuthMessage").textContent="";
-    const p=$('#landingAuthForm [name="password"]');if(p)p.autocomplete=mode==="signup"?"new-password":"current-password";
-    $("#landingAuthPanel")?.scrollIntoView({behavior:"smooth",block:"center"});
-  }
-  document.addEventListener("click",e=>{
-    const b=e.target.closest("[data-landing-mode]");
-    if(b){e.preventDefault();e.stopImmediatePropagation();setMode(b.dataset.landingMode);return;}
-    if(e.target.closest("#landingBack")){e.preventDefault();e.stopImmediatePropagation();$("#landingAuthPanel")?.classList.add("hidden");return;}
-    if(e.target.closest("#landingSwitchMode")){e.preventDefault();e.stopImmediatePropagation();setMode(mode==="signup"?"signin":"signup");}
-  },true);
-  $("#landingAuthForm")?.addEventListener("submit",async e=>{
-    e.preventDefault();e.stopImmediatePropagation();
-    const message=$("#landingAuthMessage"),button=$("#landingAuthSubmit"),f=new FormData(e.currentTarget);
-    const email=String(f.get("email")||"").trim(),password=String(f.get("password")||"");
-    const sb=authClient();
-    if(!sb){message.textContent="Sign-in service did not load. Check your connection and refresh.";return;}
-    button.disabled=true;button.textContent="Please wait…";
-    try{
-      const r=mode==="signup"?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
-      if(r.error){message.textContent=r.error.message;return;}
-      if(mode==="signup"&&!r.data.session){message.textContent="Account created. Check your email to confirm, then return to sign in.";return;}
-      const session=r.data.session||(await sb.auth.getSession()).data?.session;
-      if(!session){message.textContent="No active session. Please sign in again.";return;}
-      $("#landingPage")?.classList.add("hidden");document.body.classList.remove("landing-mode");
-      document.querySelectorAll(".page").forEach(p=>p.classList.toggle("hidden",p.id!=="homePage"));
-      const title=$("#pageTitle");if(title)title.textContent="Your money at a glance";
-      const status=$("#connectionStatus");if(status)status.textContent="● Signed in";
-      window.scrollTo(0,0);
-      window.dispatchEvent(new CustomEvent("livingbudget:signedin"));
-    }catch(err){message.textContent=err?.message||"Unable to sign in. Check your internet and try again.";}
-    finally{button.disabled=false;button.textContent=mode==="signup"?"Create account":"Sign in";}
-  },true);
-  window.addEventListener("error",e=>console.error("Living Budget error:",e.message,e.filename,e.lineno));
-})();
-</script>
 
 </body></html>
