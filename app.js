@@ -135,7 +135,7 @@ if(modalKind==="goal"){let x={id,name:f.name.trim(),target:Number(f.target),save
 if(modalKind==="contribute"){let g=data.goals.find(x=>String(x.id)===String(editId));if(g){g.saved=Number(g.saved)+Number(f.amount);save();render();toast("Savings updated.")}}
 if(modalKind==="bill"){let old=data.bills.find(y=>String(y.id)===String(editId));let x={id,name:f.name.trim(),amount:Number(f.amount),due:f.due,paid:old?.paid||false};if(editId)data.bills=data.bills.map(y=>String(y.id)===String(editId)?x:y);else data.bills.push(x);save();render();await cloudUpsert("bills",x);toast(editId?"Bill updated.":"Bill added.")}
 if(modalKind==="debt"){let x={id,name:f.name.trim(),direction:f.direction,amount:Number(f.amount),due:f.due};if(editId)data.debts=data.debts.map(y=>String(y.id)===String(editId)?x:y);else data.debts.push(x);save();render();await cloudUpsert("debts",x);toast(editId?"Debt updated.":"Debt record added.")}
-closeModal();e.currentTarget.reset();editId=null;
+closeModal();$("#recordForm")?.reset();editId=null;
 });
 $("#transactionSearch").addEventListener("input",renderTransactions);$("#typeFilter").addEventListener("change",renderTransactions);$("#categoryFilter").addEventListener("change",renderTransactions);
 function buildTransactionShareText(){
