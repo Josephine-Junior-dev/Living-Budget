@@ -210,8 +210,21 @@ $("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supaba
 $("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;landingDismissed=false;authUI();toast("Signed out.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
-/* Public welcome page authentication */
-let landingMode="signup",landingExplicitSubmit=false;
+/* Public welcome page authentication: email or phone + password. */
+let landingMode="signup",landingExplicitSubmit=false,landingPendingPhone="";
+const landingMethod=$("#landingAuthMethod");
+function setLandingMethod(method){
+ const phone=method==="phone";
+ $("#landingEmailField").classList.toggle("hidden",phone);
+ $("#landingEmailField input").disabled=phone;
+ $("#landingEmailField input").required=!phone;
+ $("#landingPhoneField").classList.toggle("hidden",!phone);
+ $("#landingPhoneField input").disabled=!phone;
+ $("#landingPhoneField input").required=phone;
+ if(!phone){landingPendingPhone="";$("#landingOtpField").classList.add("hidden");$("#landingOtpField input").disabled=true;$("#landingOtpField input").required=false;}
+}
+landingMethod?.addEventListener("change",()=>{setLandingMethod(landingMethod.value);$("#landingAuthMessage").textContent="";});
+setLandingMethod(landingMethod?.value||"email");
 // Only a real tap/click on the visible button may start authentication.
 $("#landingAuthSubmit")?.addEventListener("click",()=>{landingExplicitSubmit=true;});
 function setLandingMode(mode){
@@ -231,38 +244,82 @@ document.addEventListener("click",e=>{
  if(e.target.closest("#landingBack")){$("#landingAuthPanel").classList.add("hidden");return;}
  if(e.target.closest("#landingSwitchMode")){setLandingMode(landingMode==="signup"?"signin":"signup");}
 });
+function normalizeKenyanPhone(raw){
+ let p=String(raw||"").trim().replace(/[\\s()-]/g,"");
+ if(/^0[17]\\d{8}$/.test(p))return "+254"+p.slice(1);
+ if(/^254[17]\\d{8}$/.test(p))return "+"+p;
+ if(/^\\+254[17]\\d{8}$/.test(p))return p;
+ return p.startsWith("+")?p:"";
+}
+async function finishLandingSignIn(result,message){
+ if(result.error){message.textContent=result.error.message;return false;}
+ if(result.data?.session&&result.data?.user){
+  user=result.data.user;landingDismissed=true;authUI();showPage("home");message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
+  cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});
+  return true;
+ }
+ return false;
+}
 $("#landingAuthForm")?.addEventListener("submit",async e=>{
  e.preventDefault();
  const message=$("#landingAuthMessage");
- if(!landingExplicitSubmit){message.textContent="Your details are ready. Tap the Sign in button to continue.";return;}
+ if(!landingExplicitSubmit){message.textContent="Your details are ready. Tap the button to continue.";return;}
  landingExplicitSubmit=false;
  if(!supabaseClient){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
- const f=new FormData(e.currentTarget),email=String(f.get("email")||""),password=String(f.get("password")||"");
+ const f=new FormData(e.currentTarget),method=String(f.get("authMethod")||"email"),password=String(f.get("password")||"");
+ let email=String(f.get("email")||"").trim(),phone=normalizeKenyanPhone(f.get("phone"));
+ if(method==="phone"&&!phone&&!landingPendingPhone){message.textContent="Enter a valid phone number, e.g. 0712345678 or +254712345678.";return;}
  const submit=$("#landingAuthSubmit");submit.disabled=true;submit.textContent="Please wait…";
  try{
-  const result=landingMode==="signup"?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});
-  if(result.error)message.textContent=result.error.message;
-  else if(landingMode==="signup"&&!result.data.session)message.textContent="Account created. Please check your email to confirm, then sign in here.";
-  else if(result.data.user){user=result.data.user;landingDismissed=true;authUI();showPage("home");message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});}
+  if(landingPendingPhone){
+   const token=String(f.get("otp")||"").trim();
+   if(!token){message.textContent="Enter the SMS verification code first.";return;}
+   const result=await supabaseClient.auth.verifyOtp({phone:landingPendingPhone,token,type:"sms"});
+   if(await finishLandingSignIn(result,message)){landingPendingPhone="";$("#landingOtpField").classList.add("hidden");$("#landingOtpField input").disabled=true;}
+   return;
+  }
+  let result;
+  if(method==="phone"){
+   result=landingMode==="signup"
+    ?await supabaseClient.auth.signUp({phone,password})
+    :await supabaseClient.auth.signInWithPassword({phone,password});
+  }else{
+   result=landingMode==="signup"
+    ?await supabaseClient.auth.signUp({email,password})
+    :await supabaseClient.auth.signInWithPassword({email,password});
+  }
+  if(result.error){message.textContent=result.error.message;return;}
+  if(landingMode==="signup"&&!result.data.session){
+   if(method==="phone"&&result.data.user){
+    landingPendingPhone=phone;
+    $("#landingOtpField").classList.remove("hidden");$("#landingOtpField input").disabled=false;$("#landingOtpField input").required=true;
+    submit.textContent="Verify SMS code";
+    message.textContent="We sent a verification code by SMS. Enter it above, then tap Verify SMS code.";
+   }else{
+    message.textContent="Account created. Please check your email to confirm, then sign in here.";
+   }
+   return;
+  }
+  await finishLandingSignIn(result,message);
  }catch(err){message.textContent=err.message||"Unable to connect. Please try again.";}
- finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
+ finally{submit.disabled=false;if(!landingPendingPhone)submit.textContent=landingMode==="signup"?"Create account":"Sign in";else submit.textContent="Verify SMS code";}
 });
-
 // Clean login links safely: never keep a password in the browser URL/history.
 // If an email was supplied in the URL, open the sign-in form and prefill only the email.
 (function prepareLoginLink(){
  try {
   const url=new URL(window.location.href);
   const email=url.searchParams.get("email");
-  const hadLoginParams=url.searchParams.has("email")||url.searchParams.has("password");
+  const hadLoginParams=url.searchParams.has("email")||url.searchParams.has("password")||url.searchParams.has("phone");
   if(email){
    const emailInput=$("#landingAuthForm input[name=email]");
-   if(emailInput)emailInput.value=email;
+   if(emailInput){emailInput.value=email;$("#landingAuthMethod").value="email";setLandingMethod("email");}
    setLandingMode("signin");
   }
   if(hadLoginParams){
    url.searchParams.delete("email");
    url.searchParams.delete("password");
+   url.searchParams.delete("phone");
    history.replaceState({},document.title,url.pathname+url.search+url.hash);
   }
  } catch(e){console.warn("Could not process sign-in link:",e);}
