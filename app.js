@@ -3,11 +3,14 @@
    Never place a Supabase service_role/secret key in browser code. */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const STORAGE="living_budget_v1";
+function storageKey(){return user&&user.id?STORAGE+"_user_"+user.id:STORAGE;}
+function readSaved(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return {}}}
+function loadForSignedInUser(){const saved=readSaved(storageKey());return {...structuredClone(initial),...saved};}
 const today=()=>new Date().toISOString().slice(0,10);
 const initial={transactions:[],budgets:[],goals:[],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:0};
 let data=load(),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null,landingDismissed=false;
-function load(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");const state={...structuredClone(initial),...saved};/* Remove only the original built-in demo budgets and goals; keep all user-created records. */state.budgets=(state.budgets||[]).filter(x=>!([{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.limit)===d.limit&&x.category===d.category)));state.goals=(state.goals||[]).filter(x=>!([{id:"g1",name:"Emergency fund",target:50000,saved:5000},{id:"g2",name:"Education",target:40000,saved:8000}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.target)===d.target&&Number(x.saved)===d.saved)));return state}catch{return structuredClone(initial)}}
-function save(){data.currency=currency;localStorage.setItem(STORAGE,JSON.stringify(data))}
+function load(){try{const saved=readSaved(STORAGE);const state={...structuredClone(initial),...saved};/* Remove only the original built-in demo budgets and goals; keep all user-created records. */state.budgets=(state.budgets||[]).filter(x=>!([{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.limit)===d.limit&&x.category===d.category)));state.goals=(state.goals||[]).filter(x=>!([{id:"g1",name:"Emergency fund",target:50000,saved:5000},{id:"g2",name:"Education",target:40000,saved:8000}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.target)===d.target&&Number(x.saved)===d.saved)));return state}catch{return structuredClone(initial)}}
+function save(){data.currency=currency;localStorage.setItem(storageKey(),JSON.stringify(data))}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function money(v){return currency+" "+Number(v||0).toLocaleString(undefined,{maximumFractionDigits:2})}
 function dateText(d){return d?new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"No date"}
@@ -97,40 +100,25 @@ const cloudMap={
 async function cloudLoad(){
  if(!supabaseClient||!user)return;
  if(window.__livingBudgetCloudLoading)return window.__livingBudgetCloudLoading;
+ const accountId=user.id;
  window.__livingBudgetCloudLoading=(async()=>{
-  const localSnapshot={};
-  for(const key of Object.keys(cloudMap))localSnapshot[key]=Array.isArray(data[key])?data[key].map(x=>({...x})):[];
-  const pendingUploads=[];
   let anyLoaded=false,hadError=false;
   for(const [key,m] of Object.entries(cloudMap)){
    try{
-    const {data:rows,error}=await supabaseClient.from(m.table).select("*").order(m.sort,{ascending:false});
+    const {data:rows,error}=await supabaseClient.from(m.table).select("*").eq("user_id",accountId).order(m.sort,{ascending:false});
     if(error)throw error;
-    const remote=(rows||[]).map(m.from);
-    const remoteIds=new Set(remote.map(x=>String(x.id)));
-    const local=localSnapshot[key];
-    for(const item of local){
-     if(remoteIds.has(String(item.id)))continue;
-     if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(item.id))){
-      item.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(16).slice(2);
-     }
-     pendingUploads.push({key,item});
-    }
-    const merged=new Map();
-    for(const item of local)merged.set(String(item.id),item);
-    for(const item of remote)merged.set(String(item.id),item);
-    data[key]=[...merged.values()];
+    if(!user||user.id!==accountId)return;
+    data[key]=(rows||[]).map(m.from);
     anyLoaded=true;
    }catch(err){
     hadError=true;
     console.error("Cloud load failed for "+m.table+":",err);
-    // Keep local records for this table; a failure in one table must not hide other data.
    }
   }
+  if(!user||user.id!==accountId)return;
   save();render();
-  for(const pending of pendingUploads)await cloudUpsert(pending.key,pending.item);
-  if(hadError)toast(anyLoaded?"Some cloud records could not load. Other records are displayed.":"Cloud data could not load; showing records saved on this phone.");
-  else toast("Your records are loaded and saved.");
+  if(hadError)toast(anyLoaded?"Some cloud records could not load. Please check Supabase permissions.":"Cloud data could not load. Check the database setup and internet connection.");
+  else toast("Your private account records are loaded.");
  })().finally(()=>{window.__livingBudgetCloudLoading=null;});
  return window.__livingBudgetCloudLoading;
 }
@@ -209,8 +197,8 @@ $("#printReport")?.addEventListener("click",()=>{showPage("reports");window.setT
 $("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["Living Budget monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
 $("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
 $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
-$("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabaseClient){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:"https://josephine-junior-dev.github.io/Living-Budget/"}}):await supabaseClient.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;landingDismissed=true;authUI();if(user)cloudLoad()}});
-$("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;landingDismissed=false;authUI();toast("Signed out.")});
+$("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabaseClient){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:"https://josephine-junior-dev.github.io/Living-Budget/"}}):await supabaseClient.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();if(user)cloudLoad()}});
+$("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;data=load();currency=data.currency||"KSh";render();landingDismissed=false;authUI();toast("Signed out.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication: email + password only. */
@@ -237,7 +225,7 @@ document.addEventListener("click",e=>{
 async function finishLandingSignIn(result,message){
  if(result.error){message.textContent=result.error.message;return false;}
  if(result.data?.session&&result.data?.user){
-  user=result.data.user;landingDismissed=true;authUI();showPage(landingDestination||"home");landingDestination=null;message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
+  user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();showPage(landingDestination||"home");landingDestination=null;message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
   cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});
   return true;
  }
