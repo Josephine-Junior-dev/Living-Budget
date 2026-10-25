@@ -201,3 +201,7 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 .summary-clickable{cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .16s;}
 .summary-clickable:hover,.summary-clickable:focus-visible{transform:translateY(-2px);border-color:#24764f;box-shadow:0 10px 25px rgba(36,118,79,.13);outline:2px solid transparent;}
 .summary-clickable:focus-visible{outline:2px solid #24764f;outline-offset:3px;}
+
+/* Transactions expense summary cards act as period filters. */
+.expense-period-card.selected{border-color:#315d92;box-shadow:0 0 0 2px rgba(49,93,146,.16),0 10px 25px rgba(18,37,65,.09);}
+.expense-period-card small{display:block;}
