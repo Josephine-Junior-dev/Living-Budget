@@ -4,9 +4,9 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const STORAGE="living_budget_v1";
 const today=()=>new Date().toISOString().slice(0,10);
-const initial={transactions:[],budgets:[{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}],goals:[{id:"g1",name:"Emergency fund",target:50000,saved:5000,icon:"🛟"},{id:"g2",name:"Education",target:40000,saved:8000,icon:"📚"}],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:10000};
+const initial={transactions:[],budgets:[],goals:[],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:0};
 let data=load(),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null,landingDismissed=false;
-function load(){try{return {...structuredClone(initial),...JSON.parse(localStorage.getItem(STORAGE)||"{}")}}catch{return structuredClone(initial)}}
+function load(){try{const saved=JSON.parse(localStorage.getItem(STORAGE)||"{}");const state={...structuredClone(initial),...saved};/* Remove only the original built-in demo budgets and goals; keep all user-created records. */state.budgets=(state.budgets||[]).filter(x=>!([{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.limit)===d.limit&&x.category===d.category)));state.goals=(state.goals||[]).filter(x=>!([{id:"g1",name:"Emergency fund",target:50000,saved:5000},{id:"g2",name:"Education",target:40000,saved:8000}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.target)===d.target&&Number(x.saved)===d.saved)));return state}catch{return structuredClone(initial)}}
 function save(){data.currency=currency;localStorage.setItem(STORAGE,JSON.stringify(data))}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function money(v){return currency+" "+Number(v||0).toLocaleString(undefined,{maximumFractionDigits:2})}
