@@ -196,3 +196,8 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 
 /* Native anchor fallback: the sign-in panel can open even if app.js fails to load. */
 #landingAuthPanel:target{display:block!important}
+
+/* Dashboard summary cards are accessible, tappable shortcuts. */
+.summary-clickable{cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .16s;}
+.summary-clickable:hover,.summary-clickable:focus-visible{transform:translateY(-2px);border-color:#24764f;box-shadow:0 10px 25px rgba(36,118,79,.13);outline:2px solid transparent;}
+.summary-clickable:focus-visible{outline:2px solid #24764f;outline-offset:3px;}
