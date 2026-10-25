@@ -163,7 +163,7 @@ $("#recordForm").addEventListener("submit",async e=>{e.preventDefault();let f=Ob
 if(modalKind==="transaction"){let x={id,description:f.description.trim(),amount:Number(f.amount),category:f.category,date:f.date,type:f.type};if(editId)data.transactions=data.transactions.map(y=>String(y.id)===String(editId)?x:y);else data.transactions.push(x);save();render();await cloudUpsert("transactions",x);toast(editId?"Transaction updated.":"Transaction saved.");if(!editId&&x.type==="expense"){const t=totals();if(t.income>0&&t.balance<=0&&confirm("Your available balance is "+money(t.balance)+". Have you borrowed money to cover expenses? Tap OK to record the debt, or Cancel if you have not borrowed.")){openModal("debt");const fields=$("#modalFields");fields.querySelector('input[name="name"]').value="Borrowed to cover expenses";fields.querySelector('select[name="direction"]').value="owe";fields.querySelector('input[name="amount"]').value=t.balance<0?String(Math.abs(t.balance)):"";}}}
 if(modalKind==="budget"){let x={id,name:f.name.trim(),category:f.category,limit:Number(f.limit)};if(editId)data.budgets=data.budgets.map(y=>String(y.id)===String(editId)?x:y);else data.budgets.push(x);save();render();await cloudUpsert("budgets",x);toast(editId?"Budget updated.":"Budget created.")}
 if(modalKind==="goal"){let x={id,name:f.name.trim(),target:Number(f.target),saved:Number(f.saved||0),icon:"🎯"};if(editId)data.goals=data.goals.map(y=>String(y.id)===String(editId)?x:y);else data.goals.push(x);save();render();await cloudUpsert("goals",x);toast(editId?"Savings goal updated.":"Savings goal created.")}
-if(modalKind==="contribute"){let g=data.goals.find(x=>String(x.id)===String(editId));if(g){g.saved=Number(g.saved)+Number(f.amount);save();render();toast("Savings updated.")}}
+if(modalKind==="contribute"){let g=data.goals.find(x=>String(x.id)===String(editId));if(g){g.saved=Number(g.saved)+Number(f.amount);save();render();await cloudUpsert("goals",g);toast("Savings updated.")}}
 if(modalKind==="bill"){let old=data.bills.find(y=>String(y.id)===String(editId));let x={id,name:f.name.trim(),amount:Number(f.amount),due:f.due,paid:old?.paid||false};if(editId)data.bills=data.bills.map(y=>String(y.id)===String(editId)?x:y);else data.bills.push(x);save();render();await cloudUpsert("bills",x);toast(editId?"Bill updated.":"Bill added.")}
 if(modalKind==="debt"){let x={id,name:f.name.trim(),direction:f.direction,amount:Number(f.amount),due:f.due};if(editId)data.debts=data.debts.map(y=>String(y.id)===String(editId)?x:y);else data.debts.push(x);save();render();await cloudUpsert("debts",x);toast(editId?"Debt updated.":"Debt record added.")}
 closeModal();$("#recordForm")?.reset();editId=null;
@@ -214,8 +214,7 @@ $("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabas
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication: email + password only. */
-let landingMode="signup",landingExplicitSubmit=false;
-$("#landingAuthSubmit")?.addEventListener("click",()=>{landingExplicitSubmit=true;});
+let landingMode="signup";
 function setLandingMode(mode){
  landingMode=mode==="signin"?"signin":"signup";
  $("#landingAuthPanel")?.classList.remove("hidden");
@@ -245,8 +244,6 @@ async function finishLandingSignIn(result,message){
 $("#landingAuthForm")?.addEventListener("submit",async e=>{
  e.preventDefault();
  const message=$("#landingAuthMessage");
- if(!landingExplicitSubmit){message.textContent="Your details are ready. Tap the button to continue.";return;}
- landingExplicitSubmit=false;
  if(!supabaseClient){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
  const f=new FormData(e.currentTarget),email=String(f.get("email")||"").trim(),password=String(f.get("password")||"");
  if(!email){message.textContent="Enter your email address.";return;}
