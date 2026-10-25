@@ -56,8 +56,8 @@ function authUI(){
  $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
  $("#signOut").classList.toggle("hidden",!user);
  $("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready";
- document.body.classList.toggle("landing-mode",!user);
- $("#landingPage")?.classList.toggle("hidden",!!user);
+ document.body.classList.toggle("landing-mode",!landingDismissed);
+ $("#landingPage")?.classList.toggle("hidden",landingDismissed);
 }
 const cloudMap={
  transactions:{table:"lb_transactions",sort:"transaction_date",from:r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}),to:x=>({id:x.id,user_id:user.id,description:x.description,category:x.category,transaction_date:x.date,amount:x.amount,type:x.type})},
