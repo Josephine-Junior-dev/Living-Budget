@@ -51,7 +51,7 @@ function openModal(kind,defaultType=null){
  $("#modalTitle").textContent=title;$("#modalFields").innerHTML=fields;$("#modal").classList.remove("hidden");document.body.style.overflow="hidden";
 }function closeModal(){$("#modal").classList.add("hidden");document.body.style.overflow=""}
 function exportCSV(filename,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}));a.download=filename;a.click();URL.revokeObjectURL(a.href)}
-function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);window.livingBudgetSupabase=supabase;$("#connectionStatus").textContent="● Cloud ready";supabase.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user)cloudLoad()});supabase.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user)cloudLoad()})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
+function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);window.livingBudgetSupabase=supabase;$("#connectionStatus").textContent="● Cloud ready";supabase.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Initial cloud load failed:",e);toast("Could not load cloud data. Check your connection and database setup.");});}});supabase.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Cloud sync failed:",e);});}})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
 function authUI(){
  $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
  $("#signOut").classList.toggle("hidden",!user);
@@ -211,7 +211,7 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
   const result=landingMode==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});
   if(result.error)message.textContent=result.error.message;
   else if(landingMode==="signup"&&!result.data.session)message.textContent="Account created. Please check your email to confirm, then sign in here.";
-  else if(result.data.user){user=result.data.user;authUI();message.textContent="Signed in successfully.";await cloudLoad();showPage("home");toast("Welcome to Living Budget!");}
+  else if(result.data.user){user=result.data.user;authUI();showPage("home");message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});}
  }catch(err){message.textContent=err.message||"Unable to connect. Please try again.";}
  finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
 });
