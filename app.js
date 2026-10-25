@@ -216,6 +216,25 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
  finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
 });
 
-// The landing page dispatches this after successful sign-in. Re-check the session and load cloud records.
-// Authentication is handled once by the landing-page handler above. Supabase session changes are watched in initSupabase().
+// Clean login links safely: never keep a password in the browser URL/history.
+// If an email was supplied in the URL, open the sign-in form and prefill only the email.
+(function prepareLoginLink(){
+ try {
+  const url=new URL(window.location.href);
+  const email=url.searchParams.get("email");
+  const hadLoginParams=url.searchParams.has("email")||url.searchParams.has("password");
+  if(email){
+   const emailInput=$("#landingAuthForm input[name=email]");
+   if(emailInput)emailInput.value=email;
+   setLandingMode("signin");
+  }
+  if(hadLoginParams){
+   url.searchParams.delete("email");
+   url.searchParams.delete("password");
+   history.replaceState({},document.title,url.pathname+url.search+url.hash);
+  }
+ } catch(e){console.warn("Could not process sign-in link:",e);}
+})();
+
+// Authentication is handled by the landing form; Supabase session changes are watched in initSupabase().
 initSupabase();render();
