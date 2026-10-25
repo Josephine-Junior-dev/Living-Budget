@@ -5,7 +5,7 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const STORAGE="living_budget_v1";
 const today=()=>new Date().toISOString().slice(0,10);
 const initial={transactions:[],budgets:[{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}],goals:[{id:"g1",name:"Emergency fund",target:50000,saved:5000,icon:"🛟"},{id:"g2",name:"Education",target:40000,saved:8000,icon:"📚"}],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:10000};
-let data=load(),currency=data.currency||"KSh",supabase=null,user=null,modalKind="transaction",editId=null;
+let data=load(),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null;
 function load(){try{return {...structuredClone(initial),...JSON.parse(localStorage.getItem(STORAGE)||"{}")}}catch{return structuredClone(initial)}}
 function save(){data.currency=currency;localStorage.setItem(STORAGE,JSON.stringify(data))}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -51,7 +51,7 @@ function openModal(kind,defaultType=null){
  $("#modalTitle").textContent=title;$("#modalFields").innerHTML=fields;$("#modal").classList.remove("hidden");document.body.style.overflow="hidden";
 }function closeModal(){$("#modal").classList.add("hidden");document.body.style.overflow=""}
 function exportCSV(filename,rows){let csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"}));a.download=filename;a.click();URL.revokeObjectURL(a.href)}
-function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabase=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);window.livingBudgetSupabase=supabase;$("#connectionStatus").textContent="● Cloud ready";supabase.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Initial cloud load failed:",e);toast("Could not load cloud data. Check your connection and database setup.");});}});supabase.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Cloud sync failed:",e);});}})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
+function initSupabase(){let c=window.APP_CONFIG;if(!c?.SUPABASE_URL||!c?.SUPABASE_KEY||!window.supabase){$("#connectionStatus").textContent="● Preview mode";return}try{supabaseClient=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_KEY);window.livingBudgetSupabase=supabaseClient;$("#connectionStatus").textContent="● Cloud ready";supabaseClient.auth.getSession().then(({data:d})=>{user=d.session?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Initial cloud load failed:",e);toast("Could not load cloud data. Check your connection and database setup.");});}});supabaseClient.auth.onAuthStateChange((_e,s)=>{user=s?.user||null;authUI();if(user){showPage("home");cloudLoad().catch(e=>{console.error("Cloud sync failed:",e);});}})}catch(e){console.error(e);$("#connectionStatus").textContent="● Preview mode"}}
 function authUI(){
  $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
  $("#signOut").classList.toggle("hidden",!user);
@@ -67,7 +67,7 @@ const cloudMap={
  debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:x=>({id:x.id,user_id:user.id,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
 };
 async function cloudLoad(){
- if(!supabase||!user)return;
+ if(!supabaseClient||!user)return;
  if(window.__livingBudgetCloudLoading)return window.__livingBudgetCloudLoading;
  window.__livingBudgetCloudLoading=(async()=>{
   const localSnapshot={};
@@ -76,7 +76,7 @@ async function cloudLoad(){
   let anyLoaded=false,hadError=false;
   for(const [key,m] of Object.entries(cloudMap)){
    try{
-    const {data:rows,error}=await supabase.from(m.table).select("*").order(m.sort,{ascending:false});
+    const {data:rows,error}=await supabaseClient.from(m.table).select("*").order(m.sort,{ascending:false});
     if(error)throw error;
     const remote=(rows||[]).map(m.from);
     const remoteIds=new Set(remote.map(x=>String(x.id)));
@@ -106,8 +106,8 @@ async function cloudLoad(){
  })().finally(()=>{window.__livingBudgetCloudLoading=null;});
  return window.__livingBudgetCloudLoading;
 }
-async function cloudUpsert(kind,item){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
-async function cloudDelete(kind,id){if(!supabase||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabase.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
+async function cloudUpsert(kind,item){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
+async function cloudDelete(kind,id){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
 document.addEventListener("click",e=>{
  const nav=e.target.closest("[data-page]");
@@ -178,8 +178,8 @@ $("#printReport")?.addEventListener("click",()=>{showPage("reports");window.setT
 $("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["Living Budget monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
 $("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
 $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
-$("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabase){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;authUI();if(user)cloudLoad()}});
-$("#signOut").addEventListener("click",async()=>{if(supabase)await supabase.auth.signOut();user=null;authUI();toast("Signed out.")});
+$("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabaseClient){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;authUI();if(user)cloudLoad()}});
+$("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;authUI();toast("Signed out.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication */
@@ -204,11 +204,11 @@ document.addEventListener("click",e=>{
 $("#landingAuthForm")?.addEventListener("submit",async e=>{
  e.preventDefault();
  const message=$("#landingAuthMessage");
- if(!supabase){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
+ if(!supabaseClient){message.textContent="Secure sign-in is not available yet. Please try again shortly.";return;}
  const f=new FormData(e.currentTarget),email=String(f.get("email")||""),password=String(f.get("password")||"");
  const submit=$("#landingAuthSubmit");submit.disabled=true;submit.textContent="Please wait…";
  try{
-  const result=landingMode==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});
+  const result=landingMode==="signup"?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});
   if(result.error)message.textContent=result.error.message;
   else if(landingMode==="signup"&&!result.data.session)message.textContent="Account created. Please check your email to confirm, then sign in here.";
   else if(result.data.user){user=result.data.user;authUI();showPage("home");message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});}
