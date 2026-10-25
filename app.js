@@ -211,25 +211,11 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
   const result=landingMode==="signup"?await supabase.auth.signUp({email,password}):await supabase.auth.signInWithPassword({email,password});
   if(result.error)message.textContent=result.error.message;
   else if(landingMode==="signup"&&!result.data.session)message.textContent="Account created. Please check your email to confirm, then sign in here.";
-  else if(result.data.user){user=result.data.user;authUI();message.textContent="Signed in successfully.";cloudLoad();}
+  else if(result.data.user){user=result.data.user;authUI();message.textContent="Signed in successfully.";await cloudLoad();showPage("home");toast("Welcome to Living Budget!");}
  }catch(err){message.textContent=err.message||"Unable to connect. Please try again.";}
  finally{submit.disabled=false;submit.textContent=landingMode==="signup"?"Create account":"Sign in";}
 });
 
 // The landing page dispatches this after successful sign-in. Re-check the session and load cloud records.
-window.addEventListener("livingbudget:signedin",async()=>{
- try{
-  if(!supabase)initSupabase();
-  if(!supabase)return;
-  const {data:sessionData,error}=await supabase.auth.getSession();
-  if(error)throw error;
-  user=sessionData.session?.user||null;
-  authUI();
-  if(user)await cloudLoad();
- }catch(err){
-  console.error("Living Budget sign-in sync failed:",err);
-  const message=$("#landingAuthMessage")||$("#authMessage");
-  if(message)message.textContent="Signed in, but data could not load. Please refresh and try again.";
- }
-});
+// Authentication is handled once by the landing-page handler above. Supabase session changes are watched in initSupabase().
 initSupabase();render();
