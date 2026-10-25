@@ -214,7 +214,7 @@ $("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabas
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication: email + password only. */
-let landingMode="signup";
+let landingMode="signup",landingDestination=null;
 function setLandingMode(mode){
  landingMode=mode==="signin"?"signin":"signup";
  $("#landingAuthPanel")?.classList.remove("hidden");
@@ -227,6 +227,8 @@ function setLandingMode(mode){
  $("#landingAuthPanel").scrollIntoView({behavior:"smooth",block:"center"});
 }
 document.addEventListener("click",e=>{
+ const feature=e.target.closest("[data-feature-page]");
+ if(feature){const destination=feature.dataset.featurePage;if(user){landingDismissed=true;authUI();showPage(destination);}else{landingDestination=destination;setLandingMode("signup");}return;}
  const mode=e.target.closest("[data-landing-mode]");
  if(mode){setLandingMode(mode.dataset.landingMode);return;}
  if(e.target.closest("#landingBack")){$("#landingAuthPanel").classList.add("hidden");return;}
@@ -235,7 +237,7 @@ document.addEventListener("click",e=>{
 async function finishLandingSignIn(result,message){
  if(result.error){message.textContent=result.error.message;return false;}
  if(result.data?.session&&result.data?.user){
-  user=result.data.user;landingDismissed=true;authUI();showPage("home");message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
+  user=result.data.user;landingDismissed=true;authUI();showPage(landingDestination||"home");landingDestination=null;message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
   cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});
   return true;
  }
