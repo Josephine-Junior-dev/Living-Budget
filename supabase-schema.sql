@@ -76,6 +76,7 @@ create policy "lb_debts_own" on public.lb_debts for all to authenticated using (
 drop policy if exists "lb_members_owner" on public.lb_budget_members;
 create policy "lb_members_owner" on public.lb_budget_members for all to authenticated using (owner_id=auth.uid()) with check (owner_id=auth.uid());
 grant usage on schema public to anon, authenticated;
-grant select, insert, update, delete on public.lb_profiles, public.lb_transactions, public.lb_budgets, public.lb_categories, public.lb_savings_goals, public.lb_bills, public.lb_debts, public.lb_budget_members to authenticated;
-grant select on public.lb_profiles, public.lb_transactions, public.lb_budgets, public.lb_categories, public.lb_savings_goals, public.lb_bills, public.lb_debts, public.lb_budget_members to anon;
--- Do not add broad anon write grants. Authenticated access is restricted by RLS.
+-- Remove direct table access from unauthenticated visitors. RLS is an additional layer, not a replacement for least-privilege grants.
+revoke all privileges on table public.lb_profiles, public.lb_transactions, public.lb_budgets, public.lb_categories, public.lb_savings_goals, public.lb_bills, public.lb_debts, public.lb_budget_members from anon, public;
+grant select, insert, update, delete on table public.lb_profiles, public.lb_transactions, public.lb_budgets, public.lb_categories, public.lb_savings_goals, public.lb_bills, public.lb_debts, public.lb_budget_members to authenticated;
+-- Never grant browser roles access to auth.users or use a service_role key in client code.
