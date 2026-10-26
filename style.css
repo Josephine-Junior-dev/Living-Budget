@@ -205,3 +205,7 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 /* Transactions expense summary cards act as period filters. */
 .expense-period-card.selected{border-color:#315d92;box-shadow:0 0 0 2px rgba(49,93,146,.16),0 10px 25px rgba(18,37,65,.09);}
 .expense-period-card small{display:block;}
+
+
+/* Funding-source and spending-shortfall alert */
+.funding-alert{margin:0 0 20px;padding:16px 18px;border:1px solid #f0c66e;border-radius:16px;background:#fff8e6;color:#573b0a;box-shadow:0 4px 18px #7b5a1710}.funding-alert strong{display:block;font-size:15px}.funding-alert p{margin:8px 0 12px;line-height:1.5;color:#765b2c}.funding-alert .btn{min-height:40px}.funding-alert.hidden{display:none}
