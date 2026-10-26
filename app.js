@@ -3,15 +3,16 @@
    Never place a Supabase service_role/secret key in browser code. */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const STORAGE="living_budget_v1";
-function storageKey(){return user&&user.id?STORAGE+"_user_"+user.id:STORAGE;}
+function storageKey(){return user&&user.id?STORAGE+"_user_"+user.id:STORAGE+"_preview";}
 function readSaved(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return {}}}
-function loadForSignedInUser(){const saved=readSaved(storageKey());return {...structuredClone(initial),...saved};}
+function loadForSignedInUser(){const saved=readSaved(STORAGE+"_user_"+user.id);return {...structuredClone(initial),...saved};}
 const today=()=>new Date().toISOString().slice(0,10);
 const initial={transactions:[],budgets:[],goals:[],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:0};
-let data=load(),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null,landingDismissed=false;
+let data=structuredClone(initial),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null,landingDismissed=false;
 let transactionExpensePeriod="all";
 function load(){try{const saved=readSaved(STORAGE);const state={...structuredClone(initial),...saved};/* Remove only the original built-in demo budgets and goals; keep all user-created records. */state.budgets=(state.budgets||[]).filter(x=>!([{id:"b1",name:"Food & groceries",limit:10000,category:"Food"},{id:"b2",name:"Housing & rent",limit:15000,category:"Housing"},{id:"b3",name:"Transport",limit:6000,category:"Transport"},{id:"b4",name:"Bills & utilities",limit:7000,category:"Bills"}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.limit)===d.limit&&x.category===d.category)));state.goals=(state.goals||[]).filter(x=>!([{id:"g1",name:"Emergency fund",target:50000,saved:5000},{id:"g2",name:"Education",target:40000,saved:8000}].some(d=>String(x.id)===d.id&&x.name===d.name&&Number(x.target)===d.target&&Number(x.saved)===d.saved)));return state}catch{return structuredClone(initial)}}
 function save(){data.currency=currency;localStorage.setItem(storageKey(),JSON.stringify(data))}
+function clearAccountData(){data=structuredClone(initial);currency=data.currency||"KSh";render();}
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function money(v){return currency+" "+Number(v||0).toLocaleString(undefined,{maximumFractionDigits:2})}
 function dateText(d){return d?new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"No date"}
@@ -92,48 +93,63 @@ function authUI(){
  $("#landingPage")?.classList.toggle("hidden",landingDismissed);
 }
 const cloudMap={
- transactions:{table:"lb_transactions",sort:"transaction_date",from:r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}),to:x=>({id:x.id,user_id:user.id,description:x.description,category:x.category,transaction_date:x.date,amount:x.amount,type:x.type})},
- budgets:{table:"lb_budgets",sort:"created_at",from:r=>({id:r.id,name:r.name,category:r.category,limit:Number(r.monthly_limit)}),to:x=>({id:x.id,user_id:user.id,name:x.name,category:x.category,monthly_limit:x.limit})},
- goals:{table:"lb_savings_goals",sort:"created_at",from:r=>({id:r.id,name:r.name,target:Number(r.target_amount),saved:Number(r.saved_amount),icon:"🎯"}),to:x=>({id:x.id,user_id:user.id,name:x.name,target_amount:x.target,saved_amount:x.saved})},
- bills:{table:"lb_bills",sort:"due_date",from:r=>({id:r.id,name:r.name,amount:Number(r.amount),due:r.due_date,paid:!!r.is_paid}),to:x=>({id:x.id,user_id:user.id,name:x.name,amount:x.amount,due_date:x.due,is_paid:!!x.paid})},
- debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:x=>({id:x.id,user_id:user.id,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
+ transactions:{table:"lb_transactions",sort:"transaction_date",from:r=>({id:r.id,description:r.description,category:r.category,date:r.transaction_date,amount:Number(r.amount),type:r.type}),to:(x,accountId)=>({id:x.id,user_id:accountId,description:x.description,category:x.category,transaction_date:x.date,amount:x.amount,type:x.type})},
+ budgets:{table:"lb_budgets",sort:"created_at",from:r=>({id:r.id,name:r.name,category:r.category,limit:Number(r.monthly_limit)}),to:(x,accountId)=>({id:x.id,user_id:accountId,name:x.name,category:x.category,monthly_limit:x.limit})},
+ goals:{table:"lb_savings_goals",sort:"created_at",from:r=>({id:r.id,name:r.name,target:Number(r.target_amount),saved:Number(r.saved_amount),icon:"🎯"}),to:(x,accountId)=>({id:x.id,user_id:accountId,name:x.name,target_amount:x.target,saved_amount:x.saved})},
+ bills:{table:"lb_bills",sort:"due_date",from:r=>({id:r.id,name:r.name,amount:Number(r.amount),due:r.due_date,paid:!!r.is_paid}),to:(x,accountId)=>({id:x.id,user_id:accountId,name:x.name,amount:x.amount,due_date:x.due,is_paid:!!x.paid})},
+ debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:(x,accountId)=>({id:x.id,user_id:accountId,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
 };
 async function cloudLoad(){
  if(!supabaseClient||!user)return;
- if(window.__livingBudgetCloudLoading&&window.__livingBudgetCloudLoadingUser===user.id)return window.__livingBudgetCloudLoading;
  const accountId=user.id;
+ if(window.__livingBudgetCloudLoading&&window.__livingBudgetCloudLoadingUser===accountId)return window.__livingBudgetCloudLoading;
  window.__livingBudgetCloudLoadingUser=accountId;
+ // Never show local records while checking a signed-in account's cloud data.
+ for(const key of Object.keys(cloudMap))data[key]=[];
+ render();
  window.__livingBudgetCloudLoading=(async()=>{
-  const localSnapshot={};
-  for(const key of Object.keys(cloudMap))localSnapshot[key]=Array.isArray(data[key])?data[key].map(x=>({...x})):[];
-  const pendingUploads=[];
-  let anyLoaded=false,hadError=false;
-  for(const [key,m] of Object.entries(cloudMap)){
-   try{
+  const loaded={};
+  try{
+   for(const [key,m] of Object.entries(cloudMap)){
     const {data:rows,error}=await supabaseClient.from(m.table).select("*").eq("user_id",accountId).order(m.sort,{ascending:false});
     if(error)throw error;
     if(!user||user.id!==accountId)return;
-    const remote=(rows||[]).map(m.from),remoteIds=new Set(remote.map(x=>String(x.id)));
-    const local=localSnapshot[key],merged=new Map();
-    for(const item of local){merged.set(String(item.id),item);if(!remoteIds.has(String(item.id)))pendingUploads.push({key,item});}
-    for(const item of remote)merged.set(String(item.id),item);
-    data[key]=[...merged.values()];
-    anyLoaded=true;
-   }catch(err){
-    hadError=true;
-    console.error("Cloud load failed for "+m.table+":",err);
+    loaded[key]=(rows||[]).map(m.from);
+   }
+   if(!user||user.id!==accountId)return;
+   // Cloud is authoritative for all financial records. Never merge or upload old local records.
+   for(const key of Object.keys(cloudMap))data[key]=loaded[key]||[];
+   save();render();
+   toast("Your private account records are loaded.");
+  }catch(err){
+   console.error("Secure cloud load failed:",err);
+   if(user&&user.id===accountId){
+    for(const key of Object.keys(cloudMap))data[key]=[];
+    render();
+    toast("Financial records could not be loaded securely. Please retry; no local records were imported.");
    }
   }
-  if(!user||user.id!==accountId)return;
-  save();render();
-  for(const pending of pendingUploads){if(!user||user.id!==accountId)return;await cloudUpsert(pending.key,pending.item);}
-  if(hadError)toast(anyLoaded?"Some cloud records could not load. Please check Supabase permissions.":"Cloud data could not load. Check the database setup and internet connection.");
-  else toast("Your private account records are loaded.");
  })().finally(()=>{if(window.__livingBudgetCloudLoadingUser===accountId){window.__livingBudgetCloudLoading=null;window.__livingBudgetCloudLoadingUser=null;}});
  return window.__livingBudgetCloudLoading;
 }
-async function cloudUpsert(kind,item){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).upsert(m.to(item),{onConflict:"id"});if(error)throw error;}catch(e){console.error("Cloud save failed:",kind,e);toast("Saved on this phone, but cloud sync failed.");}}
-async function cloudDelete(kind,id){if(!supabaseClient||!user||!cloudMap[kind])return;try{const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).delete().eq("id",id);if(error)throw error;}catch(e){console.error("Cloud delete failed:",kind,e);toast("Deleted on this phone, but cloud deletion failed.");}}
+async function cloudUpsert(kind,item){
+ const accountId=user?.id;
+ if(!supabaseClient||!accountId||!cloudMap[kind])return;
+ try{
+  const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).upsert(m.to(item,accountId),{onConflict:"id"});
+  if(error)throw error;
+  if(!user||user.id!==accountId)return;
+ }catch(e){console.error("Cloud save failed:",kind,e);toast("Cloud save failed. Please retry; account data was not shared.");}
+}
+async function cloudDelete(kind,id){
+ const accountId=user?.id;
+ if(!supabaseClient||!accountId||!cloudMap[kind])return;
+ try{
+  const m=cloudMap[kind],{error}=await supabaseClient.from(m.table).delete().eq("id",id).eq("user_id",accountId);
+  if(error)throw error;
+  if(!user||user.id!==accountId)return;
+ }catch(e){console.error("Cloud delete failed:",kind,e);toast("Cloud deletion failed. Please retry.");}
+}
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
 document.addEventListener("click",e=>{
  const expensePeriod=e.target.closest("[data-expense-period]");if(expensePeriod){e.preventDefault();transactionExpensePeriod=expensePeriod.dataset.expensePeriod||"all";showPage("transactions");const typeFilter=$("#typeFilter"),categoryFilter=$("#categoryFilter"),searchInput=$("#transactionSearch");if(typeFilter)typeFilter.value="expense";if(categoryFilter)categoryFilter.value="all";if(searchInput)searchInput.value="";$("[data-expense-period]").forEach(card=>card.classList.toggle("selected",card===expensePeriod));renderTransactions();return;}
@@ -210,7 +226,7 @@ $("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-t
 $("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
 $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
 $("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabaseClient){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:"https://josephine-junior-dev.github.io/Living-Budget/"}}):await supabaseClient.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();if(user)cloudLoad()}});
-$("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;data=load();currency=data.currency||"KSh";render();landingDismissed=false;authUI();toast("Signed out.")});
+$("#signOut").addEventListener("click",async()=>{if(supabaseClient)await supabaseClient.auth.signOut();user=null;data=structuredClone(initial);currency=data.currency||"KSh";render();landingDismissed=false;authUI();toast("Signed out. Private records cleared from this screen.")});
 $("#accountButton").addEventListener("click",()=>showPage("settings"));$("#currencySelect").value=currency;$("#savingsTarget").value=data.savingsTarget||0;
 
 /* Public welcome page authentication: email + password only. */
