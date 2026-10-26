@@ -209,3 +209,6 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 
 /* Funding-source and spending-shortfall alert */
 .funding-alert{margin:0 0 20px;padding:16px 18px;border:1px solid #f0c66e;border-radius:16px;background:#fff8e6;color:#573b0a;box-shadow:0 4px 18px #7b5a1710}.funding-alert strong{display:block;font-size:15px}.funding-alert p{margin:8px 0 12px;line-height:1.5;color:#765b2c}.funding-alert .btn{min-height:40px}.funding-alert.hidden{display:none}
+
+/* PesaGuard debt summary: visible financial-health signals, without treating all overspending as debt. */
+.debt-card{border:1px solid transparent;transition:background .18s,border-color .18s,transform .18s}.debt-card:hover{transform:translateY(-2px)}.debt-card-danger{background:#fff0f0!important;border-color:#f0b5b5!important;color:#8f1d1d!important}.debt-card-danger span,.debt-card-danger small{color:#a12626!important}.debt-card-warning{background:#fff7e8!important;border-color:#f1d39a!important;color:#8b4d08!important}.debt-card-warning span,.debt-card-warning small{color:#9a5a0a!important}.debt-card-clear{background:#effaf2!important;border-color:#c9e8d0!important}.debt-card-clear span,.debt-card-clear small{color:#24764f!important}
