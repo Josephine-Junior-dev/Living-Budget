@@ -14,3 +14,18 @@ alter table public.lb_transactions
     funding_source is null
     or funding_source in ('borrowed','savings','cash','paid_by_someone','unpaid')
   );
+
+-- Security: allow only signed-in users to access their own transactions.
+-- Table-level grants apply to the newly added columns as well.
+alter table public.lb_transactions enable row level security;
+
+drop policy if exists "lb_transactions_own" on public.lb_transactions;
+create policy "lb_transactions_own"
+  on public.lb_transactions
+  for all
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+revoke all privileges on table public.lb_transactions from anon, public;
+grant select, insert, update, delete on table public.lb_transactions to authenticated;
