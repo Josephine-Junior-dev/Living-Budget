@@ -89,9 +89,9 @@ function initSupabase(){
  }
 }
 function authUI(){
- $("#authMessage").textContent=user?"Signed in as "+user.email:"Not signed in.";
+ $("#authMessage").textContent=user?"Signed in as "+(user.name||user.email)+(user.demo?" (temporary demo)":""):"Not signed in.";
  $("#signOut").classList.toggle("hidden",!user);
- $("#connectionStatus").textContent=user?"● Signed in":"● Cloud ready";
+ $("#connectionStatus").textContent=user?(user.demo?"● Demo mode · sample data":"● Signed in"):"● Cloud ready";
  document.body.classList.toggle("landing-mode",!landingDismissed);
  $("#landingPage")?.classList.toggle("hidden",landingDismissed);
 }
@@ -103,7 +103,7 @@ const cloudMap={
  debts:{table:"lb_debts",sort:"created_at",from:r=>({id:r.id,name:r.name,direction:r.direction,amount:Number(r.balance),due:r.due_date}),to:(x,accountId)=>({id:x.id,user_id:accountId,name:x.name,direction:x.direction,original_amount:x.amount,balance:x.amount,due_date:x.due||null})}
 };
 async function cloudLoad(){
- if(!supabaseClient||!user)return;
+ if(!supabaseClient||!user||user.demo)return;
  const accountId=user.id;
  if(window.__livingBudgetCloudLoading&&window.__livingBudgetCloudLoadingUser===accountId)return window.__livingBudgetCloudLoading;
  window.__livingBudgetCloudLoadingUser=accountId;
@@ -136,6 +136,7 @@ async function cloudLoad(){
  return window.__livingBudgetCloudLoading;
 }
 async function cloudUpsert(kind,item){
+ if(user?.demo)return;
  const accountId=user?.id;
  if(!supabaseClient||!accountId||!cloudMap[kind])return;
  try{
@@ -145,6 +146,7 @@ async function cloudUpsert(kind,item){
  }catch(e){console.error("Cloud save failed:",kind,e);toast("Cloud save failed. Please retry; account data was not shared.");}
 }
 async function cloudDelete(kind,id){
+ if(user?.demo)return;
  const accountId=user?.id;
  if(!supabaseClient||!accountId||!cloudMap[kind])return;
  try{
@@ -303,6 +305,28 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
   }
  } catch(e){console.warn("Could not process sign-in link:",e);}
 })();
+
+
+/* TEMPORARY DEMO ACCESS — demo-only local data; never connects to Supabase. */
+document.addEventListener("submit",function(e){
+ const form=e.target;
+ if(!form||form.id!=="landingAuthForm")return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const msg=$("#landingAuthMessage"),submit=$("#landingAuthSubmit");
+ const name=String(new FormData(form).get("demoName")||"").trim();
+ const password=String(new FormData(form).get("password")||"");
+ if(!name){msg.textContent="Please enter your name.";return;}
+ if(password!=="1234"){msg.textContent="For this temporary demo, enter password 1234.";return;}
+ const slug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
+ if(!slug){msg.textContent="Please enter a valid name.";return;}
+ user={id:"demo_"+slug,name:name,email:name,demo:true};
+ const saved=readSaved(STORAGE+"_user_"+user.id);
+ data={...structuredClone(initial),...saved,transactions:saved.transactions||[],budgets:saved.budgets||[],goals:saved.goals||[],bills:saved.bills||[],debts:saved.debts||[],family:saved.family||[]};
+ currency=data.currency||"KSh";render();landingDismissed=true;authUI();
+ showPage(landingDestination||"home");landingDestination=null;
+ msg.textContent="Demo opened. Use sample data only; this is not a secure real account.";
+ toast("Welcome to PesaGuard demo, "+name+"!");
+},true);
 
 // Authentication is handled by the landing form; Supabase session changes are watched in initSupabase().
 initSupabase();render();
