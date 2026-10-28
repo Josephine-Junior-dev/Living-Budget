@@ -309,7 +309,16 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
  } catch(e){console.warn("Could not process sign-in link:",e);}
 
 /* M-Pesa import bridge: saves into this user's existing Living Budget transactions. */
-async function saveMpesaRows(rows){const seen=new Set(data.transactions.map(t=>[t.date,t.type,Number(t.amount),String(t.description||'').trim().toLowerCase()].join('|')));const fresh=rows.filter(x=>!seen.has([x.date,x.type,Number(x.amount),String(x.description||"").trim().toLowerCase()].join('|')));if(!fresh.length){toast('Selected transactions are already recorded.');return}const added=fresh.map(x=>({id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'tx_'+Date.now()+'_'+Math.random().toString(36).slice(2),date:x.date,type:x.type,category:x.category,description:x.description,amount:Number(x.amount),fundingSource:'',fundingAmount:0}));for(const item of added){data.transactions.push(item);await cloudUpsert('transactions',item)}save();render();toast('Imported '+added.length+' M-Pesa transaction(s).'+(rows.length>added.length?' '+(rows.length-added.length)+' duplicate(s) skipped.':''))}
+async function saveMpesaRows(rows){
+ const keyFor=x=>[String(x.date||""),String(x.type||""),Number(x.amount||0),String(x.description||"").trim().toLowerCase()].join("|");
+ const seen=new Set(data.transactions.map(keyFor));
+ const fresh=[];
+ for(const x of (Array.isArray(rows)?rows:[])){const key=keyFor(x);if(seen.has(key))continue;seen.add(key);fresh.push(x);}
+ if(!fresh.length){toast("Selected transactions are already recorded.");return;}
+ const added=fresh.map(x=>({id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():"tx_"+Date.now()+"_"+Math.random().toString(36).slice(2),date:x.date,type:x.type,category:x.category||"Other",description:String(x.description||"Imported transaction"),amount:Number(x.amount),fundingSource:"",fundingAmount:0}));
+ for(const item of added){data.transactions.push(item);await cloudUpsert("transactions",item);}
+ save();render();toast("Imported "+added.length+" M-Pesa transaction(s)."+(rows.length>added.length?" "+(rows.length-added.length)+" duplicate(s) skipped.":""));
+}
 function mountMpesaButton(){const target=$('#transactionsPage .section-head .button-row');if(!target)return;let b=$('#importMpesaBtn');if(!b){b=document.createElement('button');b.id='importMpesaBtn';b.className='btn outline';b.type='button';b.textContent='📥 Import M-Pesa';target.prepend(b)}if(!b.dataset.wired){b.dataset.wired='1';b.addEventListener('click',()=>{if(window.MpesaImporter)window.MpesaImporter.open(saveMpesaRows,toast);else toast('Importer is still loading. Refresh the page and try again.')})}}
 new MutationObserver(mountMpesaButton).observe(document.body,{childList:true,subtree:true});mountMpesaButton();
 
