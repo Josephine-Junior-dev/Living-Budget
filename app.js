@@ -6,7 +6,7 @@ const STORAGE="living_budget_v1";
 function storageKey(){return user&&user.id?STORAGE+"_user_"+user.id:STORAGE+"_preview";}
 function readSaved(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return {}}}
 function loadForSignedInUser(){const saved=readSaved(STORAGE+"_user_"+user.id);return {...structuredClone(initial),...saved,transactions:[],budgets:[],goals:[],bills:[],debts:[],family:[]};}
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const initial={transactions:[],budgets:[],goals:[],bills:[],debts:[],family:[],currency:"KSh",savingsTarget:0};
 let data=structuredClone(initial),currency=data.currency||"KSh",supabaseClient=null,user=null,modalKind="transaction",editId=null,landingDismissed=false;
 let transactionExpensePeriod="all";
