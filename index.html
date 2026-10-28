@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#174b3a">
 <meta name="description" content="Living Budget — Plan wisely. Spend smartly. Build your future."><title>Living Budget | Plan Wisely. Spend Smartly.</title>
-<link rel="stylesheet" href="./style.css?v=20261028-netlify-all-features">
+<link rel="stylesheet" href="./style.css?v=20261028-debt-trim-runtime-fix">
 <script>
 /* Show JavaScript failures visibly instead of leaving buttons silently unresponsive. */
 window.addEventListener("error",function(e){
@@ -17,7 +17,7 @@ window.addEventListener("unhandledrejection",function(e){
   box.textContent="Living Budget async error: "+(e.reason&&e.reason.message||String(e.reason||"unknown error"));
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261028-netlify-all-features"></script><script src="./mpesa-import.js?v=20261028-netlify-all-features"></script><script src="./app.js?v=20261028-debt-import-fix" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js?v=20261028-debt-trim-runtime-fix"></script><script src="./mpesa-import.js?v=20261028-debt-trim-runtime-fix"></script><script src="./app.js?v=20261028-debt-trim-runtime-fix" defer></script>
 </head>
 <body class="landing-mode">
 <section id="landingPage" class="landing-page" aria-label="Welcome to Living Budget">
@@ -55,5 +55,5 @@ window.addEventListener("unhandledrejection",function(e){
 <div id="modal" class="modal-backdrop hidden"><form id="recordForm" class="modal-card"><div class="modal-head"><div><p class="eyebrow">LIVING BUDGET</p><h2 id="modalTitle">Add record</h2></div><button type="button" id="closeModal" class="close-btn" aria-label="Close">×</button></div><div id="modalFields"></div><div class="button-row modal-actions"><button type="button" id="cancelModal" class="btn outline">Cancel</button><button class="btn primary" type="submit">Save</button></div></form></div><div id="toast" class="toast" role="status"></div>
 
 
-<!-- Living Budget redeploy trigger: 2026-10-26 17:58 -->
+<!-- Living Budget redeploy trigger: 2026-10-28 19:50 debt-trim-runtime-fix -->
 </body></html>
