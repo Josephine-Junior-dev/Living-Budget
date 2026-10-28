@@ -1,4 +1,4 @@
-/* PesaGuard — mobile-first family budgeting app.
+/* Living Budget — mobile-first family budgeting app.
    Local preview is enabled until config.js contains Supabase URL and publishable/anon key.
    Never place a Supabase service_role/secret key in browser code. */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -43,7 +43,7 @@ function renderDebts(){$("#debtsList").innerHTML=data.debts.map(d=>{const status
 async function recordDebtPayment(id){const d=data.debts.find(x=>String(x.id)===String(id));if(!d||Number(d.amount)<=0)return;const label=d.direction==="owed"?"received from "+d.name:"paid to "+d.name;const raw=window.prompt("Enter the amount "+(d.direction==="owed"?"received":"repaid")+" for "+label+". Outstanding balance: "+money(d.amount),"");if(raw===null)return;const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){toast("Enter a payment greater than zero.");return;}if(amount>Number(d.amount)){toast("Payment cannot be greater than the outstanding balance.");return;}const tx={id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString()+"-debtpay",description:(d.direction==="owed"?"Loan repayment received from: ":"Debt repayment to: ")+d.name,category:d.direction==="owed"?"Loan repayment received":"Debt repayment",date:today(),amount,type:d.direction==="owed"?"income":"expense",fundingSource:"",fundingAmount:0};d.amount=Math.max(0,Number(d.amount)-amount);data.transactions.push(tx);save();render();await cloudUpsert("debts",d);await cloudUpsert("transactions",tx);toast(d.amount===0?"Debt settled and cash movement recorded.":"Payment recorded; outstanding debt updated.");}
 function renderReports(){let t=totals();$("#reportIncome").textContent=money(t.income);$("#reportExpense").textContent=money(t.expense);$("#reportBalance").textContent=money(t.balance);let obj={};data.transactions.filter(x=>x.type==="expense"&&!isNonEarnedCategory(x.category)&&(x.date||"").startsWith(today().slice(0,7))).forEach(x=>obj[x.category]=(obj[x.category]||0)+Number(x.amount));let entries=Object.entries(obj).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1]));$("#reportBars").innerHTML=entries.map(([k,v])=>'<div class="report-bar-row"><strong>'+esc(k)+'</strong><div class="report-bar"><span style="width:'+v/max*100+'%"></span></div><span>'+money(v)+'</span></div>').join("")||empty("Add expenses to see your spending report.")}
 function renderFamily(){$("#familyList").innerHTML=data.family.map(f=>row("👤",f.email,f.role==="editor"?"Can view and edit":"Can view","Invitation pending","","<button class='link-btn' data-delete='family' data-id='"+esc(f.id)+"'>Remove</button>")).join("")||""}
-const pages={home:["Your money at a glance","A simple view of your family’s finances."],transactions:["Transactions","Track income and spending in one place."],budgets:["Family budget","Plan household spending without the stress."],goals:["Savings goals","Turn your plans into achievable milestones."],bills:["Bills & reminders","Know what is due and what has been paid."],debts:["Debts & loans","Keep a clear record of money borrowed or lent."],reports:["Reports","Understand where your money goes."],family:["Family members","Plan together with people you trust."],settings:["Settings","Personalize your budgeting experience."],premium:["PesaGuard Premium","More insight. More control."]};
+const pages={home:["Your money at a glance","A simple view of your family’s finances."],transactions:["Transactions","Track income and spending in one place."],budgets:["Family budget","Plan household spending without the stress."],goals:["Savings goals","Turn your plans into achievable milestones."],bills:["Bills & reminders","Know what is due and what has been paid."],debts:["Debts & loans","Keep a clear record of money borrowed or lent."],reports:["Reports","Understand where your money goes."],family:["Family members","Plan together with people you trust."],settings:["Settings","Personalize your budgeting experience."],premium:["Living Budget Premium","More insight. More control."]};
 function showPage(p){if(!pages[p])p="home";Object.keys(pages).forEach(k=>$("#"+k+"Page")?.classList.toggle("hidden",k!==p));$$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===p));$("#pageTitle").textContent=pages[p][0];$("#pageSubtitle").textContent=pages[p][1];$("#eyebrow").textContent=p==="home"?"YOUR MONEY, WITH A PLAN":p.toUpperCase();$("#sidebar").classList.remove("open");window.scrollTo({top:0,behavior:"smooth"});if(p==="transactions")renderTransactions()}
 function field(name,label,type="text",value="",opts=null,required=true){let el=type==="select"?'<select name="'+name+'" '+(required?"required":"")+'>'+(opts||[]).map(o=>'<option value="'+esc(o.value??o)+'" '+((o.value??o)===value?"selected":"")+'>'+esc(o.label??o)+'</option>').join("")+'</select>':'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+(required?"required":"")+(type==="number"?' min="0" step="0.01"':'')+'>';return '<label class="field">'+label+el+'</label>'}
 function openModal(kind,defaultType=null){
@@ -196,12 +196,12 @@ closeModal();$("#recordForm")?.reset();editId=null;
 $("#transactionSearch").addEventListener("input",renderTransactions);$("#typeFilter").addEventListener("change",renderTransactions);$("#categoryFilter").addEventListener("change",renderTransactions);
 function buildTransactionShareText(){
  const rows=[["Date","Description","Type","Category","Amount"],...data.transactions.slice().sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map(x=>[x.date,x.description,x.type,x.category,x.amount])];
- return "PesaGuard — Transactions\n"+rows.map(r=>r.join(" | ")).join("\n");
+ return "Living Budget — Transactions\n"+rows.map(r=>r.join(" | ")).join("\n");
 }
 function buildReportShareText(){
  const t=totals(),month=today().slice(0,7),groups={};
  data.transactions.filter(x=>x.type==="expense"&&(x.date||"").startsWith(month)).forEach(x=>groups[x.category]=(groups[x.category]||0)+Number(x.amount));
- return "PesaGuard — Monthly Report ("+month+")\nIncome: "+money(t.income)+"\nExpenses: "+money(t.expense)+"\nBalance: "+money(t.balance)+"\n\nSpending by category:\n"+(Object.entries(groups).map(([k,v])=>k+": "+money(v)).join("\n")||"No expenses recorded.");
+ return "Living Budget — Monthly Report ("+month+")\nIncome: "+money(t.income)+"\nExpenses: "+money(t.expense)+"\nBalance: "+money(t.balance)+"\n\nSpending by category:\n"+(Object.entries(groups).map(([k,v])=>k+": "+money(v)).join("\n")||"No expenses recorded.");
 }
 async function shareContent(title,textContent){
  try{
@@ -217,21 +217,21 @@ function currentPageShareText(){
  const add=(title,items)=>{lines.push(title);if(!items.length){lines.push("No records.");return;}for(const item of items)lines.push(item);};
  if(key==="transactions")return buildTransactionShareText();
  if(key==="reports"||key==="home")return buildReportShareText();
- if(key==="budgets")add("PesaGuard — Budgets",data.budgets.map(x=>x.name+" | "+x.category+" | Limit "+money(x.limit)));
- else if(key==="goals")add("PesaGuard — Savings Goals",data.goals.map(x=>x.name+" | Saved "+money(x.saved)+" of "+money(x.target)));
- else if(key==="bills")add("PesaGuard — Bills",data.bills.map(x=>x.name+" | "+money(x.amount)+" | Due "+(x.due||"") +" | "+(x.paid?"Paid":"Unpaid")));
- else if(key==="debts")add("PesaGuard — Debts & Loans",data.debts.map(x=>x.name+" | "+(x.direction==="owed"?"Owed to you":"You owe")+" | Balance "+money(x.amount)));
- else if(key==="family")add("PesaGuard — Family",data.family.map(x=>x.email+" | "+x.role+" | Invitation pending"));
- else lines.push("PesaGuard — "+(pages[key]?.[0]||"My Budget"));
+ if(key==="budgets")add("Living Budget — Budgets",data.budgets.map(x=>x.name+" | "+x.category+" | Limit "+money(x.limit)));
+ else if(key==="goals")add("Living Budget — Savings Goals",data.goals.map(x=>x.name+" | Saved "+money(x.saved)+" of "+money(x.target)));
+ else if(key==="bills")add("Living Budget — Bills",data.bills.map(x=>x.name+" | "+money(x.amount)+" | Due "+(x.due||"") +" | "+(x.paid?"Paid":"Unpaid")));
+ else if(key==="debts")add("Living Budget — Debts & Loans",data.debts.map(x=>x.name+" | "+(x.direction==="owed"?"Owed to you":"You owe")+" | Balance "+money(x.amount)));
+ else if(key==="family")add("Living Budget — Family",data.family.map(x=>x.email+" | "+x.role+" | Invitation pending"));
+ else lines.push("Living Budget — "+(pages[key]?.[0]||"My Budget"));
  return lines.join("\n");
 }
-$("#shareCurrentPage")?.addEventListener("click",()=>shareContent("PesaGuard",currentPageShareText()));
+$("#shareCurrentPage")?.addEventListener("click",()=>shareContent("Living Budget",currentPageShareText()));
 $("#printCurrentPage")?.addEventListener("click",()=>window.print());
-$("#shareTransactions")?.addEventListener("click",()=>shareContent("PesaGuard Transactions",buildTransactionShareText()));
-$("#shareReport")?.addEventListener("click",()=>shareContent("PesaGuard Monthly Report",buildReportShareText()));
+$("#shareTransactions")?.addEventListener("click",()=>shareContent("Living Budget Transactions",buildTransactionShareText()));
+$("#shareReport")?.addEventListener("click",()=>shareContent("Living Budget Monthly Report",buildReportShareText()));
 $("#printTransactions")?.addEventListener("click",()=>{showPage("transactions");window.setTimeout(()=>window.print(),100)});
 $("#printReport")?.addEventListener("click",()=>{showPage("reports");window.setTimeout(()=>window.print(),100)});
-$("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["PesaGuard monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
+$("#exportTransactions").addEventListener("click",()=>exportCSV("living-budget-transactions.csv",[["Date","Description","Type","Category","Amount"],...data.transactions.map(x=>[x.date,x.description,x.type,x.category,x.amount])]));$("#exportReport").addEventListener("click",()=>{let t=totals();exportCSV("living-budget-monthly-report.csv",[["Living Budget monthly report"],["Income",t.income],["Expenses",t.expense],["Balance",t.balance],["Category","Spent"],...Object.entries(data.transactions.filter(x=>x.type==="expense").reduce((a,x)=>(a[x.category]=(a[x.category]||0)+Number(x.amount),a),{}))])});
 $("#settingsForm").addEventListener("submit",e=>{e.preventDefault();currency=$("#currencySelect").value;data.savingsTarget=Number($("#savingsTarget").value||0);save();render();toast("Settings saved.")});
 $("#inviteForm").addEventListener("submit",e=>{e.preventDefault();let f=new FormData(e.currentTarget);data.family.push({id:Date.now().toString(),email:f.get("email"),role:f.get("role")});save();renderFamily();e.currentTarget.reset();toast("Invitation noted in this preview. Cloud family sharing is not active yet.")});
 $("#authForm").addEventListener("submit",async e=>{e.preventDefault();if(!supabaseClient){$("#authMessage").textContent="Cloud login is not active yet. Add your Supabase URL and publishable/anon key to config.js, then run the SQL setup.";return}let f=new FormData(e.currentTarget),email=f.get("email"),password=f.get("password"),action=e.submitter?.value||"signin";let result=action==="signup"?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:"https://josephine-junior-dev.github.io/Living-Budget/"}}):await supabaseClient.auth.signInWithPassword({email,password});$("#authMessage").textContent=result.error?result.error.message:(action==="signup"?"Check your email to confirm your account.":"Signed in successfully.");if(!result.error&&result.data.user){user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();if(user)cloudLoad()}});
@@ -246,7 +246,7 @@ function setLandingMode(mode){
  $("#landingAuthTitle").textContent=landingMode==="signup"?"Create your free account":"Welcome back";
  $("#landingAuthIntro").textContent=landingMode==="signup"?"Start planning your money today.":"Sign in to continue to your personal budget.";
  $("#landingAuthSubmit").textContent=landingMode==="signup"?"Create account":"Sign in";
- $("#landingSwitchMode").textContent=landingMode==="signup"?"Already have an account? Sign in":"New to PesaGuard? Create a free account";
+ $("#landingSwitchMode").textContent=landingMode==="signup"?"Already have an account? Sign in":"New to Living Budget? Create a free account";
  $("#landingAuthMessage").textContent="";
  $("#landingAuthForm input[name=password]").autocomplete=landingMode==="signup"?"new-password":"current-password";
  $("#landingAuthPanel").scrollIntoView({behavior:"smooth",block:"center"});
@@ -262,7 +262,7 @@ document.addEventListener("click",e=>{
 async function finishLandingSignIn(result,message){
  if(result.error){message.textContent=result.error.message;return false;}
  if(result.data?.session&&result.data?.user){
-  user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();showPage(landingDestination||"home");landingDestination=null;message.textContent="Signed in successfully.";toast("Welcome to PesaGuard!");
+  user=result.data.user;data=loadForSignedInUser();currency=data.currency||"KSh";render();landingDismissed=true;authUI();showPage(landingDestination||"home");landingDestination=null;message.textContent="Signed in successfully.";toast("Welcome to Living Budget!");
   cloudLoad().catch(err=>{console.error("Cloud load failed after sign-in:",err);toast("Signed in, but cloud data did not load. Check database tables and permissions.");});
   return true;
  }
@@ -334,7 +334,7 @@ document.addEventListener("submit",function(e){
  currency=data.currency||"KSh";render();landingDismissed=true;authUI();
  showPage(landingDestination||"home");landingDestination=null;
  msg.textContent="Demo opened. Use sample data only; this is not a secure real account.";
- toast("Welcome to PesaGuard demo, "+name+"!");
+ toast("Welcome to Living Budget demo, "+name+"!");
 },true);
 
 // Authentication is handled by the landing form; Supabase session changes are watched in initSupabase().
