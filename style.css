@@ -215,3 +215,6 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 
 /* Living Budget debt red-flag card */
 .debt-card{border-left:4px solid #d64c4c;background:linear-gradient(135deg,#fff,#fff8f7)}.debt-card strong{color:#b42318}.debt-card-warning{border-color:#e49a26!important;background:#fffaf0!important}.debt-card-warning strong{color:#a65c00}.debt-card-clear{border-left-color:#2d8a59!important;background:#f8fff9!important}.debt-card-clear strong{color:#236b45}.debt-card-danger{border-color:#c92a2a!important;background:#fff1f0!important}.debt-card-danger strong{color:#b42318}
+
+/* Keep the debt warning visibly below the savings progress cards on every screen size. */
+.debt-summary-row{display:block;margin:0 0 18px}.debt-summary-row #debtSummaryCard{width:100%;min-height:100px;display:block}.debt-summary-row #debtSummaryCard strong{margin:10px 0 6px}@media(max-width:650px){.debt-summary-row{margin-top:4px}.debt-summary-row #debtSummaryCard{padding:16px}}
