@@ -304,6 +304,12 @@ $("#landingAuthForm")?.addEventListener("submit",async e=>{
    history.replaceState({},document.title,url.pathname+url.search+url.hash);
   }
  } catch(e){console.warn("Could not process sign-in link:",e);}
+
+/* M-Pesa import bridge: saves into this user's existing Living Budget transactions. */
+async function saveMpesaRows(rows){const seen=new Set(data.transactions.map(t=>[t.date,t.type,Number(t.amount),String(t.description||'').trim().toLowerCase()].join('|')));const fresh=rows.filter(x=>!seen.has([x.date,x.type,Number(x.amount),x.description.trim().toLowerCase()].join('|')));if(!fresh.length){toast('Selected transactions are already recorded.');return}const added=fresh.map(x=>({id:(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'tx_'+Date.now()+'_'+Math.random().toString(36).slice(2),date:x.date,type:x.type,category:x.category,description:x.description,amount:Number(x.amount),fundingSource:'',fundingAmount:0}));for(const item of added){data.transactions.push(item);await cloudUpsert('transactions',item)}save();render();toast('Imported '+added.length+' M-Pesa transaction(s).'+(rows.length>added.length?' '+(rows.length-added.length)+' duplicate(s) skipped.':''))}
+function mountMpesaButton(){const target=$('#transactionsPage .section-head .button-row');if(target&&!$('#importMpesaBtn')){const b=document.createElement('button');b.id='importMpesaBtn';b.className='btn outline';b.type='button';b.textContent='📥 Import M-Pesa';b.onclick=()=>window.MpesaImporter.open(saveMpesaRows,toast);target.prepend(b)}}
+new MutationObserver(mountMpesaButton).observe(document.body,{childList:true,subtree:true});mountMpesaButton();
+
 })();
 
 
