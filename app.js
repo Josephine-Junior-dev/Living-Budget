@@ -157,7 +157,7 @@ async function cloudDelete(kind,id){
 }
 /* Navigation and quick actions use delegation so every desktop/mobile button responds. */
 document.addEventListener("click",e=>{
- const expensePeriod=e.target.closest("[data-expense-period]");if(expensePeriod){e.preventDefault();transactionExpensePeriod=expensePeriod.dataset.expensePeriod||"all";showPage("transactions");const typeFilter=$("#typeFilter"),categoryFilter=$("#categoryFilter"),searchInput=$("#transactionSearch");if(typeFilter)typeFilter.value="expense";if(categoryFilter)categoryFilter.value="all";if(searchInput)searchInput.value="";$("[data-expense-period]").forEach(card=>card.classList.toggle("selected",card===expensePeriod));renderTransactions();return;}
+ const expensePeriod=e.target.closest("[data-expense-period]");if(expensePeriod){e.preventDefault();transactionExpensePeriod=expensePeriod.dataset.expensePeriod||"all";showPage("transactions");const typeFilter=$("#typeFilter"),categoryFilter=$("#categoryFilter"),searchInput=$("#transactionSearch");if(typeFilter)typeFilter.value="expense";if(categoryFilter)categoryFilter.value="all";if(searchInput)searchInput.value="";$$("[data-expense-period]").forEach(card=>card.classList.toggle("selected",card===expensePeriod));renderTransactions();return;}
  const summary=e.target.closest("[data-summary-link]");if(summary){e.preventDefault();const dest=summary.dataset.summaryLink;showPage(dest);if(dest==="transactions"){const filter=summary.dataset.summaryFilter;const typeFilter=$("#typeFilter");if(typeFilter)typeFilter.value=filter||"all";renderTransactions();}return;}
  const nav=e.target.closest("[data-page]");
  if(nav){e.preventDefault();showPage(nav.dataset.page);return;}
