@@ -218,3 +218,31 @@ body.landing-mode>.topbar,body.landing-mode>.layout,body.landing-mode>.mobile-na
 
 /* Keep the debt warning visibly below the savings progress cards on every screen size. */
 .debt-summary-row{display:block;margin:0 0 18px}.debt-summary-row #debtSummaryCard{width:100%;min-height:100px;display:block}.debt-summary-row #debtSummaryCard strong{margin:10px 0 6px}@media(max-width:650px){.debt-summary-row{margin-top:4px}.debt-summary-row #debtSummaryCard{padding:16px}}
+
+/* 2026-11-19: simple, readable debt-prevention layout */
+.summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.summary-card{padding:17px}
+.summary-card strong{font-size:clamp(18px,2vw,23px)}
+.debt-free-card{background:linear-gradient(110deg,#173f31,#2e7650)}
+.debt-free-card .btn{color:#174b35}
+.landing-signin{min-height:42px;padding:10px 18px}
+.landing-auth-panel .simple-form{width:100%;max-width:440px}
+.landing-auth-panel .simple-form label{display:grid;gap:7px}
+.landing-auth-panel input{width:100%;min-height:46px;border:1px solid #dfe8e1;border-radius:10px;padding:12px;font:inherit}
+@media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){
+ .main{padding:18px 12px 88px}
+ .page-heading{align-items:flex-start}
+ .page-heading h1{font-size:23px}
+ .hero-balance{padding:20px}
+ .balance-mark{width:66px;height:66px;font-size:28px}
+ .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .summary-card{padding:13px}
+ .summary-card strong{font-size:18px;margin:10px 0 6px}
+ .summary-card>span{font-size:11px}
+ .summary-card small{font-size:10px;line-height:1.4}
+ .upgrade-card{align-items:flex-start;flex-direction:column;padding:18px}
+ .upgrade-card .btn{width:100%}
+ .landing-nav{gap:8px}
+ .landing-brand small{font-size:8px}
+}
