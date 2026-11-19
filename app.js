@@ -326,26 +326,5 @@ new MutationObserver(mountMpesaButton).observe(document.body,{childList:true,sub
 })();
 
 
-/* TEMPORARY DEMO ACCESS — demo-only local data; never connects to Supabase. */
-document.addEventListener("submit",function(e){
- const form=e.target;
- if(!form||form.id!=="landingAuthForm")return;
- e.preventDefault();e.stopImmediatePropagation();
- const msg=$("#landingAuthMessage"),submit=$("#landingAuthSubmit");
- const name=String(new FormData(form).get("demoName")||"").trim();
- const password=String(new FormData(form).get("password")||"");
- if(!name){msg.textContent="Please enter your name.";return;}
- if(password!=="1234"){msg.textContent="For this temporary demo, enter password 1234.";return;}
- const slug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
- if(!slug){msg.textContent="Please enter a valid name.";return;}
- user={id:"demo_"+slug,name:name,email:name,demo:true};
- const saved=readSaved(STORAGE+"_user_"+user.id);
- data={...structuredClone(initial),...saved,transactions:saved.transactions||[],budgets:saved.budgets||[],goals:saved.goals||[],bills:saved.bills||[],debts:saved.debts||[],family:saved.family||[]};
- currency=data.currency||"KSh";render();landingDismissed=true;authUI();
- showPage(landingDestination||"home");landingDestination=null;
- msg.textContent="Demo opened. Use sample data only; this is not a secure real account.";
- toast("Welcome to Living Budget demo, "+name+"!");
-},true);
-
 // Authentication is handled by the landing form; Supabase session changes are watched in initSupabase().
 initSupabase();render();
